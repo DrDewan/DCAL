@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dcal-annotation-tools"
+version = "0.1.0"
+description = "Validation and normalization tools for DCAL Label Studio annotations"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+dcal-annotations = "dcal_annotations.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

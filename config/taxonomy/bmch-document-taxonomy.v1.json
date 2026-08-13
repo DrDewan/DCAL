@@ -1,0 +1,86 @@
+{
+  "schema_version": "dcal.taxonomy.v1",
+  "updated": "2026-08-13",
+  "institution": "Bangladesh Medical College Hospital",
+  "provenance": "Independent DCAL snapshot of the evidence-backed BMCH physical source vocabulary. This file has no runtime dependency on DCRP.",
+  "physical_document_types": [
+    {"code": "bmch_admission_form", "name": "BMCH Admission Form", "layout_mode": "fixed_semi_fixed", "non_catalog": false},
+    {"code": "bmch_treatment_continuation_sheet", "name": "BMCH Treatment Continuation Sheet", "layout_mode": "fluid_mixed", "non_catalog": false},
+    {"code": "bmch_discharge_certificate", "name": "BMCH Discharge Certificate", "layout_mode": "semi_fixed_multi_page", "non_catalog": false},
+    {"code": "bmch_medicine_administration_chart", "name": "BMCH Medicine Administration Chart", "layout_mode": "structured_repeating_table", "non_catalog": false},
+    {"code": "bmch_intake_output_chart", "name": "BMCH Intake-Output Chart", "layout_mode": "structured_repeating_table", "non_catalog": false},
+    {"code": "bmch_temperature_vital_chart", "name": "BMCH Temperature and Vital Signs Chart", "layout_mode": "structured_time_series", "non_catalog": false},
+    {"code": "bmch_diabetic_chart", "name": "BMCH Diabetic Chart", "layout_mode": "structured_repeating_table", "non_catalog": false},
+    {"code": "bmch_haematology_report", "name": "BMCH Haematology Report", "layout_mode": "fixed_semi_fixed_report", "non_catalog": false},
+    {"code": "bmch_clinical_biochemistry_report", "name": "BMCH Clinical Biochemistry Report", "layout_mode": "fixed_semi_fixed_report", "non_catalog": false},
+    {"code": "bmch_urine_examination_report", "name": "BMCH Urine Examination Report", "layout_mode": "fixed_semi_fixed_report", "non_catalog": false},
+    {"code": "bmch_serology_immunology_report", "name": "BMCH Serology / Immunology Report", "layout_mode": "fixed_semi_fixed_report", "non_catalog": false},
+    {"code": "bmch_cross_matching_report", "name": "BMCH Cross Matching Report", "layout_mode": "fixed_semi_fixed_report", "non_catalog": false},
+    {"code": "bmch_blood_grouping_report", "name": "BMCH Blood Grouping Report", "layout_mode": "fixed_semi_fixed_report", "non_catalog": false},
+    {"code": "bmch_free_bed_admission_proforma", "name": "BMCH Free Bed Admission Proforma", "layout_mode": "fixed_semi_fixed", "non_catalog": false},
+    {"code": "bmch_emergency_department_sheet", "name": "BMCH Emergency Department Sheet", "layout_mode": "semi_fixed_mixed", "non_catalog": false},
+    {"code": "bmch_fast_track_consultation", "name": "BMCH Fast Track Consultation", "layout_mode": "semi_fixed_mixed", "non_catalog": false},
+    {"code": "referral_letter_or_form", "name": "Referral Letter / Form", "layout_mode": "narrative_mixed", "non_catalog": false},
+    {"code": "external_upper_gi_endoscopy_report", "name": "External Upper GI Endoscopy Report", "layout_mode": "semi_fixed_report", "non_catalog": false},
+    {"code": "external_mri_report", "name": "External MRI Report", "layout_mode": "narrative_report", "non_catalog": false},
+    {"code": "ecg_tracing_report", "name": "ECG Tracing / Report", "layout_mode": "fixed_report_tracing", "non_catalog": false},
+    {"code": "non_clinical_cover", "name": "Non-clinical Cover", "layout_mode": "other", "non_catalog": true},
+    {"code": "financial_billing_document", "name": "Financial / Billing Document", "layout_mode": "other", "non_catalog": true},
+    {"code": "blank_or_noninformative_page", "name": "Blank / Non-informative Page", "layout_mode": "other", "non_catalog": true},
+    {"code": "duplicate_or_rephotographed_source", "name": "Duplicate / Rephotographed Source", "layout_mode": "other", "non_catalog": true},
+    {"code": "unknown_document", "name": "Unknown Document", "layout_mode": "other", "non_catalog": true}
+  ],
+  "physical_document_variants": [
+    {"code": "bmch_admission_form_v1", "name": "BMCH Admission Form v1", "physical_document_type": "bmch_admission_form"},
+    {"code": "bmch_treatment_continuation_v1", "name": "BMCH Treatment Continuation v1", "physical_document_type": "bmch_treatment_continuation_sheet"}
+  ],
+  "region_labels": [
+    {"code": "printed_static", "name": "Printed static text", "textual": true, "requires_transcription_when_readable": true},
+    {"code": "printed_variable", "name": "Printed variable text", "textual": true, "requires_transcription_when_readable": true},
+    {"code": "handwriting", "name": "Handwriting", "textual": true, "requires_transcription_when_readable": true},
+    {"code": "checkbox_mark", "name": "Checkbox / selection mark", "textual": false, "requires_transcription_when_readable": false},
+    {"code": "stamp_or_seal", "name": "Stamp or seal", "textual": true, "requires_transcription_when_readable": true},
+    {"code": "signature", "name": "Signature / initials", "textual": false, "requires_transcription_when_readable": false},
+    {"code": "drawing_or_tracing", "name": "Drawing, plot, or tracing", "textual": false, "requires_transcription_when_readable": false},
+    {"code": "other_region", "name": "Other meaningful region", "textual": false, "requires_transcription_when_readable": false}
+  ],
+  "structure_roles": [
+    {"code": "none", "name": "No additional structure"},
+    {"code": "form_field", "name": "Form field"},
+    {"code": "free_text_block", "name": "Free-text block"},
+    {"code": "table_header", "name": "Table header"},
+    {"code": "table_cell", "name": "Table cell"},
+    {"code": "chart_axis_or_label", "name": "Chart axis or label"}
+  ],
+  "legibility_states": [
+    {"code": "legible", "name": "Legible"},
+    {"code": "partially_legible", "name": "Partially legible"},
+    {"code": "illegible", "name": "Illegible"},
+    {"code": "not_applicable", "name": "Not applicable (non-text)"}
+  ],
+  "image_quality_flags": [
+    {"code": "clear", "name": "Clear / no material defect"},
+    {"code": "blur", "name": "Blur"},
+    {"code": "rotation", "name": "Incorrect rotation"},
+    {"code": "skew", "name": "Skew"},
+    {"code": "perspective_distortion", "name": "Perspective distortion"},
+    {"code": "crop_loss", "name": "Content cropped"},
+    {"code": "glare_or_shadow", "name": "Glare or shadow"},
+    {"code": "low_contrast", "name": "Low contrast"},
+    {"code": "compression_artifact", "name": "Compression artifact"},
+    {"code": "obstruction", "name": "Finger / object obstruction"},
+    {"code": "other_quality_issue", "name": "Other quality issue"}
+  ],
+  "semantic_region_types": [
+    {"code": "follow_up", "name": "Follow-up"},
+    {"code": "fresh_order", "name": "Fresh order"},
+    {"code": "order_update", "name": "Order update"},
+    {"code": "blood_transfusion_order", "name": "Blood transfusion order"},
+    {"code": "visited_by", "name": "Visited by / consultation"},
+    {"code": "investigation_result", "name": "Investigation result"},
+    {"code": "admission_context_note", "name": "Admission context note"},
+    {"code": "isolated_observation", "name": "Isolated observation"},
+    {"code": "other_clinical_note", "name": "Other clinical note"},
+    {"code": "unknown_region", "name": "Unknown semantic region"}
+  ]
+}

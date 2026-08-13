@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  annotation-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install annotation tools
+        run: python -m pip install -e .
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate synthetic export
+        run: python -m dcal_annotations validate-export examples/label-studio-export.valid.json
+      - name: Verify deterministic normalization
+        run: |
+          python -m dcal_annotations normalize-export examples/label-studio-export.valid.json --output /tmp/gold-one.jsonl
+          python -m dcal_annotations normalize-export examples/label-studio-export.valid.json --output /tmp/gold-two.jsonl
+          cmp /tmp/gold-one.jsonl /tmp/gold-two.jsonl
+      - name: Validate project bootstrap payload
+        run: python scripts/bootstrap_label_studio_project.py --dry-run > /tmp/label-studio-project.json
+
+  compose-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose
+        env:
+          LABEL_STUDIO_USERNAME: ci@example.invalid
+          LABEL_STUDIO_PASSWORD: ci-only-not-a-real-password
+          POSTGRES_PASSWORD: ci-only-not-a-real-database-password
+        run: docker compose config --quiet
