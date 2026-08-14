@@ -44,6 +44,9 @@ jobs:
       - name: Validate Docker Compose including ingestion profile
         env:
           DCAL_WORKBENCH_INGEST_TOKEN: ci-only-not-a-real-workbench-secret
+          LABEL_STUDIO_USERNAME: ci@example.invalid
+          LABEL_STUDIO_PASSWORD: ci-only-not-a-real-password
+          POSTGRES_PASSWORD: ci-only-not-a-real-database-password
         run: docker compose --profile ingestion config --quiet
       - name: Build ingestion image
         run: docker build --tag dcal-ingestion:ci .
