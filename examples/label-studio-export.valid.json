@@ -1,0 +1,218 @@
+[
+  {
+    "id": 101,
+    "data": {
+      "image": "s3://private-dcal/synthetic/admission-page-001.png",
+      "source_object_id": "synthetic-source-001",
+      "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "patient_group_id": "synthetic-patient-group-001",
+      "encounter_group_id": "synthetic-encounter-group-001",
+      "writer_group_ids": [
+        "synthetic-writer-group-001"
+      ],
+      "source_page_index": 1,
+      "annotation_schema_version": "dcal.annotation.v1"
+    },
+    "annotations": [
+      {
+        "id": 1001,
+        "completed_by": {
+          "id": 7
+        },
+        "created_at": "2026-08-13T10:00:00Z",
+        "updated_at": "2026-08-13T10:15:00Z",
+        "was_cancelled": false,
+        "result": [
+          {
+            "id": "page-type-1",
+            "from_name": "physical_document_type",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "bmch_admission_form"
+              ]
+            }
+          },
+          {
+            "id": "page-variant-1",
+            "from_name": "physical_document_variant",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "bmch_admission_form_v1"
+              ]
+            }
+          },
+          {
+            "id": "page-quality-1",
+            "from_name": "image_quality",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "clear"
+              ]
+            }
+          },
+          {
+            "id": "region-printed-1",
+            "from_name": "region_label",
+            "to_name": "page_image",
+            "type": "rectanglelabels",
+            "original_width": 2000,
+            "original_height": 3000,
+            "image_rotation": 0,
+            "value": {
+              "x": 8.5,
+              "y": 12.0,
+              "width": 28.0,
+              "height": 3.5,
+              "rotation": 0,
+              "rectanglelabels": [
+                "printed_variable"
+              ]
+            }
+          },
+          {
+            "id": "region-printed-1",
+            "from_name": "reading_order",
+            "to_name": "page_image",
+            "type": "number",
+            "value": {
+              "number": 1
+            }
+          },
+          {
+            "id": "region-printed-1",
+            "from_name": "legibility",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "legible"
+              ]
+            }
+          },
+          {
+            "id": "region-printed-1",
+            "from_name": "structure_role",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "form_field"
+              ]
+            }
+          },
+          {
+            "id": "region-printed-1",
+            "from_name": "transcription",
+            "to_name": "page_image",
+            "type": "textarea",
+            "value": {
+              "text": [
+                "Ward 7B"
+              ]
+            }
+          },
+          {
+            "id": "region-printed-1",
+            "from_name": "field_code",
+            "to_name": "page_image",
+            "type": "textarea",
+            "value": {
+              "text": [
+                "ward"
+              ]
+            }
+          },
+          {
+            "id": "region-handwriting-1",
+            "from_name": "region_label",
+            "to_name": "page_image",
+            "type": "rectanglelabels",
+            "original_width": 2000,
+            "original_height": 3000,
+            "image_rotation": 0,
+            "value": {
+              "x": 10.0,
+              "y": 23.0,
+              "width": 70.0,
+              "height": 10.0,
+              "rotation": 0,
+              "rectanglelabels": [
+                "handwriting"
+              ]
+            }
+          },
+          {
+            "id": "region-handwriting-1",
+            "from_name": "reading_order",
+            "to_name": "page_image",
+            "type": "number",
+            "value": {
+              "number": 2
+            }
+          },
+          {
+            "id": "region-handwriting-1",
+            "from_name": "legibility",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "partially_legible"
+              ]
+            }
+          },
+          {
+            "id": "region-handwriting-1",
+            "from_name": "structure_role",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "free_text_block"
+              ]
+            }
+          },
+          {
+            "id": "region-handwriting-1",
+            "from_name": "semantic_region_type",
+            "to_name": "page_image",
+            "type": "choices",
+            "value": {
+              "choices": [
+                "admission_context_note"
+              ]
+            }
+          },
+          {
+            "id": "region-handwriting-1",
+            "from_name": "transcription",
+            "to_name": "page_image",
+            "type": "textarea",
+            "value": {
+              "text": [
+                "Fever for [?] days"
+              ]
+            }
+          },
+          {
+            "id": "page-notes-1",
+            "from_name": "annotator_notes",
+            "to_name": "page_image",
+            "type": "textarea",
+            "value": {
+              "text": [
+                "Synthetic fixture; no patient data."
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

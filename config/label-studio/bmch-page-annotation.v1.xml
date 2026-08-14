@@ -1,0 +1,120 @@
+<View>
+  <Style>
+    .dcal-note { background: #f5f7fa; border-left: 4px solid #315efb; padding: 10px 12px; margin: 8px 0 14px; }
+    .dcal-panel { border: 1px solid #d8dee9; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+  </Style>
+
+  <Header value="DCAL — BMCH single-page annotation v1" size="4"/>
+  <View className="dcal-note">
+    <Text name="instructions" value="Classify the physical page, mark image defects, then draw tight boxes around variable text or meaningful regions. Transcribe exactly; never infer unreadable content."/>
+  </View>
+
+  <View className="dcal-panel">
+    <Header value="1. Physical page classification" size="5"/>
+    <Choices name="physical_document_type" toName="page_image" choice="single" layout="select" required="true" requiredMessage="Select one physical page type.">
+      <Choice value="BMCH Admission Form" alias="bmch_admission_form"/>
+      <Choice value="BMCH Treatment Continuation Sheet" alias="bmch_treatment_continuation_sheet"/>
+      <Choice value="BMCH Discharge Certificate" alias="bmch_discharge_certificate"/>
+      <Choice value="BMCH Medicine Administration Chart" alias="bmch_medicine_administration_chart"/>
+      <Choice value="BMCH Intake-Output Chart" alias="bmch_intake_output_chart"/>
+      <Choice value="BMCH Temperature and Vital Signs Chart" alias="bmch_temperature_vital_chart"/>
+      <Choice value="BMCH Diabetic Chart" alias="bmch_diabetic_chart"/>
+      <Choice value="BMCH Haematology Report" alias="bmch_haematology_report"/>
+      <Choice value="BMCH Clinical Biochemistry Report" alias="bmch_clinical_biochemistry_report"/>
+      <Choice value="BMCH Urine Examination Report" alias="bmch_urine_examination_report"/>
+      <Choice value="BMCH Serology / Immunology Report" alias="bmch_serology_immunology_report"/>
+      <Choice value="BMCH Cross Matching Report" alias="bmch_cross_matching_report"/>
+      <Choice value="BMCH Blood Grouping Report" alias="bmch_blood_grouping_report"/>
+      <Choice value="BMCH Free Bed Admission Proforma" alias="bmch_free_bed_admission_proforma"/>
+      <Choice value="BMCH Emergency Department Sheet" alias="bmch_emergency_department_sheet"/>
+      <Choice value="BMCH Fast Track Consultation" alias="bmch_fast_track_consultation"/>
+      <Choice value="Referral Letter / Form" alias="referral_letter_or_form"/>
+      <Choice value="External Upper GI Endoscopy Report" alias="external_upper_gi_endoscopy_report"/>
+      <Choice value="External MRI Report" alias="external_mri_report"/>
+      <Choice value="ECG Tracing / Report" alias="ecg_tracing_report"/>
+      <Choice value="Non-clinical Cover" alias="non_clinical_cover"/>
+      <Choice value="Financial / Billing Document" alias="financial_billing_document"/>
+      <Choice value="Blank / Non-informative Page" alias="blank_or_noninformative_page"/>
+      <Choice value="Duplicate / Rephotographed Source" alias="duplicate_or_rephotographed_source"/>
+      <Choice value="Unknown Document — do not force a known class" alias="unknown_document"/>
+    </Choices>
+
+    <Header value="Known visual variant (leave empty when unresolved)" size="6"/>
+    <Choices name="physical_document_variant" toName="page_image" choice="single" layout="select">
+      <Choice value="BMCH Admission Form v1" alias="bmch_admission_form_v1"/>
+      <Choice value="BMCH Treatment Continuation v1" alias="bmch_treatment_continuation_v1"/>
+    </Choices>
+
+    <Header value="Image quality — select all that apply" size="6"/>
+    <Choices name="image_quality" toName="page_image" choice="multiple" layout="vertical">
+      <Choice value="Clear / no material defect" alias="clear"/>
+      <Choice value="Blur" alias="blur"/>
+      <Choice value="Incorrect rotation" alias="rotation"/>
+      <Choice value="Skew" alias="skew"/>
+      <Choice value="Perspective distortion" alias="perspective_distortion"/>
+      <Choice value="Content cropped" alias="crop_loss"/>
+      <Choice value="Glare or shadow" alias="glare_or_shadow"/>
+      <Choice value="Low contrast" alias="low_contrast"/>
+      <Choice value="Compression artifact" alias="compression_artifact"/>
+      <Choice value="Finger / object obstruction" alias="obstruction"/>
+      <Choice value="Other quality issue" alias="other_quality_issue"/>
+    </Choices>
+  </View>
+
+  <View className="dcal-panel">
+    <Header value="2. Region annotation" size="5"/>
+    <RectangleLabels name="region_label" toName="page_image" choice="single" strokeWidth="2" opacity="0.25">
+      <Label value="Printed static text" alias="printed_static" background="#43A047"/>
+      <Label value="Printed variable text" alias="printed_variable" background="#00897B"/>
+      <Label value="Handwriting" alias="handwriting" background="#1E88E5"/>
+      <Label value="Checkbox / selection mark" alias="checkbox_mark" background="#F9A825"/>
+      <Label value="Stamp or seal" alias="stamp_or_seal" background="#FB8C00"/>
+      <Label value="Signature / initials" alias="signature" background="#8E24AA"/>
+      <Label value="Drawing, plot, or tracing" alias="drawing_or_tracing" background="#6D4C41"/>
+      <Label value="Other meaningful region" alias="other_region" background="#757575"/>
+    </RectangleLabels>
+    <Image name="page_image" value="$image" zoom="true" zoomControl="true" rotateControl="true" maxWidth="100%"/>
+  </View>
+
+  <View className="dcal-panel" visibleWhen="region-selected">
+    <Header value="3. Selected region details" size="5"/>
+    <Number name="reading_order" toName="page_image" perRegion="true" min="1" step="1" required="true" requiredMessage="Assign a positive reading-order number."/>
+
+    <Choices name="legibility" toName="page_image" perRegion="true" choice="single" layout="inline" required="true" requiredMessage="Select region legibility.">
+      <Choice value="Legible" alias="legible"/>
+      <Choice value="Partially legible" alias="partially_legible"/>
+      <Choice value="Illegible" alias="illegible"/>
+      <Choice value="Not applicable — non-text" alias="not_applicable"/>
+    </Choices>
+
+    <Choices name="structure_role" toName="page_image" perRegion="true" choice="single" layout="select">
+      <Choice value="No additional structure" alias="none"/>
+      <Choice value="Form field" alias="form_field"/>
+      <Choice value="Free-text block" alias="free_text_block"/>
+      <Choice value="Table header" alias="table_header"/>
+      <Choice value="Table cell" alias="table_cell"/>
+      <Choice value="Chart axis or label" alias="chart_axis_or_label"/>
+    </Choices>
+
+    <Choices name="semantic_region_type" toName="page_image" perRegion="true" choice="single" layout="select">
+      <Choice value="Follow-up" alias="follow_up"/>
+      <Choice value="Fresh order" alias="fresh_order"/>
+      <Choice value="Order update" alias="order_update"/>
+      <Choice value="Blood transfusion order" alias="blood_transfusion_order"/>
+      <Choice value="Visited by / consultation" alias="visited_by"/>
+      <Choice value="Investigation result" alias="investigation_result"/>
+      <Choice value="Admission context note" alias="admission_context_note"/>
+      <Choice value="Isolated observation" alias="isolated_observation"/>
+      <Choice value="Other clinical note" alias="other_clinical_note"/>
+      <Choice value="Unknown semantic region" alias="unknown_region"/>
+    </Choices>
+
+    <TextArea name="transcription" toName="page_image" perRegion="true" editable="true" transcription="true" maxSubmissions="1" rows="3" placeholder="Exact visible text; use [?] only for a local unresolved fragment." displayMode="region-list"/>
+    <TextArea name="field_code" toName="page_image" perRegion="true" editable="true" maxSubmissions="1" rows="1" placeholder="Optional stable field code, for example patient_id" displayMode="region-list"/>
+  </View>
+
+  <View className="dcal-panel">
+    <Header value="4. Page notes (optional; never infer clinical content)" size="6"/>
+    <TextArea name="annotator_notes" toName="page_image" editable="true" maxSubmissions="1" rows="3" placeholder="Taxonomy uncertainty, unusual layout, or quality explanation."/>
+  </View>
+</View>

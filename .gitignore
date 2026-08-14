@@ -1,0 +1,19 @@
+.DS_Store
+.env
+.python-version
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.egg-info/
+*.py[cod]
+
+# Patient images, annotations, exports, and local Label Studio state.
+data/
+exports/
+label-studio-data/
+postgres-data/
+*.jsonl
+
+# Allow the synthetic repository fixture.
+!examples/*.jsonl
