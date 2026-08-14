@@ -9,18 +9,24 @@ Every task admitted to a gold dataset must contain:
   "data": {
     "image": "private storage URI resolved by Label Studio",
     "source_object_id": "opaque immutable object ID",
-    "source_sha256": "64 lowercase hex characters",
+    "source_sha256": "SHA-256 of the canonical rendered page PNG",
+    "raw_source_sha256": "SHA-256 of the uploaded PDF or image",
     "patient_group_id": "keyed opaque grouping ID",
     "encounter_group_id": "keyed opaque grouping ID",
     "source_page_index": 1,
-    "annotation_schema_version": "dcal.annotation.v1"
+    "annotation_schema_version": "dcal.annotation.v1",
+    "ingestion_schema_version": "dcal.ingestion.v1",
+    "render_profile": "dcal.render.300dpi-rgb-png.v1",
+    "dcal_ingestion_key": "task_<32 lowercase hex characters>"
   }
 }
 ```
 
-`patient_group_id` and `encounter_group_id` must be generated with a keyed HMAC or a secure random mapping. A plain or unsalted hash of a hospital number is vulnerable to dictionary recovery and is forbidden.
+`patient_group_id` and `encounter_group_id` must be generated with a keyed HMAC or a secure random mapping. The Drive adapter HMACs stable patient-folder and encounter-folder IDs; it never exports their names or raw Drive IDs. A plain or unsalted hash of a hospital number is vulnerable to dictionary recovery and is forbidden.
 
 The image URI is used only by Label Studio. The normalized gold record excludes ephemeral or signed URLs.
+
+Ingestion provenance is an all-or-none bundle. Manually created legacy tasks may omit the whole bundle, but a task may not contain a partial raw hash, render profile, ingestion schema, or ingestion key. `source_sha256` identifies the exact page bytes used for annotation and model training. `raw_source_sha256` identifies the original uploaded object.
 
 ## Required page annotation
 
@@ -67,7 +73,13 @@ One JSON object is written per page in JSONL format:
     "sha256": "...",
     "patient_group_id": "patient-group-001",
     "encounter_group_id": "encounter-group-001",
-    "page_index": 1
+    "page_index": 1,
+    "ingestion": {
+      "raw_sha256": "...",
+      "schema_version": "dcal.ingestion.v1",
+      "render_profile": "dcal.render.300dpi-rgb-png.v1",
+      "task_key": "task_..."
+    }
   },
   "annotation": {
     "label_studio_task_id": 1,

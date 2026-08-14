@@ -5,13 +5,17 @@
       "image": "s3://private-dcal/synthetic/admission-page-001.png",
       "source_object_id": "synthetic-source-001",
       "source_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "raw_source_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
       "patient_group_id": "synthetic-patient-group-001",
       "encounter_group_id": "synthetic-encounter-group-001",
       "writer_group_ids": [
         "synthetic-writer-group-001"
       ],
       "source_page_index": 1,
-      "annotation_schema_version": "dcal.annotation.v1"
+      "annotation_schema_version": "dcal.annotation.v1",
+      "ingestion_schema_version": "dcal.ingestion.v1",
+      "render_profile": "dcal.render.300dpi-rgb-png.v1",
+      "dcal_ingestion_key": "task_b638e18dc29d7fd98b5d9cca332c0e69"
     },
     "annotations": [
       {

@@ -30,14 +30,18 @@ jobs:
           cmp /tmp/gold-one.jsonl /tmp/gold-two.jsonl
       - name: Validate project bootstrap payload
         run: python scripts/bootstrap_label_studio_project.py --dry-run > /tmp/label-studio-project.json
+      - name: Validate ingestion CLI
+        run: python -m dcal_ingestion --help
 
   compose-contract:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Docker Compose
+      - name: Validate Docker Compose including ingestion profile
         env:
           LABEL_STUDIO_USERNAME: ci@example.invalid
           LABEL_STUDIO_PASSWORD: ci-only-not-a-real-password
           POSTGRES_PASSWORD: ci-only-not-a-real-database-password
-        run: docker compose config --quiet
+        run: docker compose --profile ingestion config --quiet
+      - name: Build ingestion image
+        run: docker build --tag dcal-ingestion:ci .
