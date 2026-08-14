@@ -12,7 +12,10 @@ Do not describe this as cryptographically immutable. A Drive owner or Shared Dri
 
 1. Create a Shared Drive dedicated to DCAL.
 2. Create a Google Cloud service account and enable the Google Drive API.
-3. Add the service account to the Shared Drive with enough permission to create, move, rename, and restrict files.
+3. Add the dedicated service account to the Shared Drive as **Manager**. Google
+   requires the organizer/Manager role to add or remove the stronger
+   `ownerRestricted` content restriction used by DCAL. Do not reuse a general
+   automation identity for this role.
 4. Save its JSON credential outside the repository at `secrets/google-drive-credentials.json`.
 5. Set `DCAL_DRIVE_ROOT_FOLDER_ID` to the Shared Drive root or a dedicated folder inside it.
 
@@ -120,7 +123,9 @@ Run `audit-drive` on a schedule and before freezing every dataset release. Any c
 
 - Uploaders should access only the intake area needed for their work.
 - Annotators normally require Label Studio access, not Drive access.
-- Limit Shared Drive manager/organizer roles because those users can remove content restrictions.
+- Limit human Shared Drive manager/organizer roles because those users can remove
+  content restrictions. The dedicated ingestion identity also has this power and
+  must be treated as a privileged credential.
 - Do not use public links.
 - Internet-facing Label Studio still requires HTTPS, network restriction, backups, and institutional approval.
 
