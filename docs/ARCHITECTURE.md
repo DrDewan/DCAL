@@ -18,6 +18,23 @@ DCAL and DCRP have separate repositories, deployments, databases, credentials, a
 6. **Model registry** — promotes a challenger only after regression gates pass. Planned.
 7. **Inference gateway** — serves only promoted models with versioned requests and responses. Planned.
 
+## Champion/challenger architecture
+
+The experiment system is provider-neutral. OpenAI, Claude, local OCR, Gemini, rules-based preprocessing, and hybrid systems all participate as challengers behind the same DCAL contracts.
+
+```mermaid
+flowchart TD
+    A["Frozen dataset release"] --> B["Provider-neutral challenger spec"]
+    B --> C["OpenAI / Claude / local / hybrid runner"]
+    C --> D["Normalized prediction contract"]
+    D --> E["Scoring and regression gates"]
+    E --> F["Champion or harvested component"]
+```
+
+Claude participation is expected, but Claude is not a privileged code path. Claude challengers must use the same dataset snapshots, output contract, scoring, cost reporting, and promotion gates as every other provider.
+
+Reusable improvements from all challengers are recorded in `docs/WINNING_COMPONENTS.md`. A losing challenger can still contribute a winning component such as a better preprocessing step, prompt fragment, parser rule, confidence rule, or template-drift detector.
+
 ## Data flow
 
 ```mermaid
