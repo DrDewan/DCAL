@@ -130,7 +130,7 @@ class IngestionServiceTests(unittest.TestCase):
         ledger = IngestionLedger(Path(directory) / "ledger.sqlite3")
         service = IngestionService(
             drive=drive,
-            label_studio=label_studio,
+            annotation_gateway=label_studio,
             ledger=ledger,
             layout=LAYOUT,
             settings=IngestionSettings(

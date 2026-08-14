@@ -103,7 +103,7 @@ class CacheAndLedgerTests(unittest.TestCase):
                         encounter_group_id="enc_opaque",
                         page_index=1,
                         local_path=f"pages/bb/{sha}.png",
-                        label_studio_task_id=91,
+                        annotation_task_id=91,
                     )
                 )
                 ledger.record_page(
@@ -115,7 +115,7 @@ class CacheAndLedgerTests(unittest.TestCase):
                         encounter_group_id="enc_opaque",
                         page_index=2,
                         local_path=f"pages/bb/{sha}.png",
-                        label_studio_task_id=91,
+                        annotation_task_id=91,
                     )
                 )
                 ledger.record_source(
@@ -129,7 +129,7 @@ class CacheAndLedgerTests(unittest.TestCase):
             with IngestionLedger(path) as ledger:
                 record = ledger.page(sha)
                 self.assertIsNotNone(record)
-                self.assertEqual(91, record.label_studio_task_id)  # type: ignore[union-attr]
+                self.assertEqual(91, record.annotation_task_id)  # type: ignore[union-attr]
                 occurrences = ledger.connection.execute(
                     "SELECT COUNT(*) FROM source_pages WHERE page_sha256=?", (sha,)
                 ).fetchone()[0]
@@ -203,7 +203,7 @@ class CacheAndLedgerTests(unittest.TestCase):
                 ).fetchone()[0]
                 record = ledger.page(sha)
 
-            self.assertEqual("2", version)
+            self.assertEqual("3", version)
             self.assertIsNotNone(record)
             self.assertEqual("src_legacy", record.source_object_id)  # type: ignore[union-attr]
             self.assertTrue(record.source_key.startswith("legacy_"))  # type: ignore[union-attr]

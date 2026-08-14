@@ -64,15 +64,15 @@ These are architectural components already established before M3 challenger work
 - **How to reuse:** All challenger specs and experiment reports must declare DCAL contracts and must not depend on DCRP internals.
 - **Follow-up:** Revisit only after M5 promotion gates pass.
 
-## WC-0002 — Label Studio as UI, not canonical dataset
+## WC-0002 — Annotation UI state is not the canonical dataset
 
 - **Status:** adopted
-- **Discovered by:** M0 annotation foundation
+- **Discovered by:** M0 contract foundation; refined by M1 first-party workbench
 - **Applies to:** annotation and dataset workflow
-- **Component:** Use Label Studio for human annotation, then validate and normalize exports into repository-owned `dcal.gold.v1` records.
-- **Evidence:** Protects DCAL from Label Studio export-shape drift and makes downstream challenger scoring stable.
+- **Component:** Use the first-party workbench for human annotation, then validate and normalize completed, provenance-eligible state into repository-owned `dcal.gold.v1` records. Retain Label Studio only as a compatibility adapter.
+- **Evidence:** Protects DCAL from mutable UI/database state and export-shape drift, blocks provenance-incomplete browser uploads from gold export, and makes downstream challenger scoring stable.
 - **Failure modes:** Requires adapter maintenance when annotation UI evolves.
-- **How to reuse:** Challengers consume normalized dataset releases, not raw Label Studio exports.
+- **How to reuse:** Challengers consume frozen normalized dataset releases, not workbench SQLite rows or raw Label Studio exports.
 - **Follow-up:** M2 should add release registry and adjudication workflow.
 
 ## WC-0003 — Opaque grouped identity and immutable source checksums
@@ -80,7 +80,7 @@ These are architectural components already established before M3 challenger work
 - **Status:** adopted
 - **Discovered by:** M1 ingestion foundation
 - **Applies to:** ingestion, dataset lineage, scoring, and audit
-- **Component:** Use SHA-256 for byte identity and keyed opaque HMAC IDs for patient and encounter grouping. Do not expose Drive names, IDs, or folder structure to Label Studio or logs.
+- **Component:** Use SHA-256 for byte identity and keyed opaque HMAC IDs for patient and encounter grouping. Do not expose Drive names, IDs, or folder structure to the workbench, optional Label Studio adapter, or logs.
 - **Evidence:** Preserves deduplication and lineage while reducing identifier leakage.
 - **Failure modes:** Changing the HMAC key after ingestion breaks stable grouping unless an explicit migration is built.
 - **How to reuse:** Challenger outputs should reference only normalized page/source IDs and dataset release IDs.

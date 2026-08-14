@@ -22,4 +22,4 @@ RUN chmod 0755 /usr/local/bin/dcal-entrypoint \
     && python -m pip install --no-cache-dir .
 
 ENTRYPOINT ["/usr/local/bin/dcal-entrypoint"]
-CMD ["watch", "--interval", "60"]
+CMD ["workbench"]

@@ -16,6 +16,7 @@ from .ledger import IngestionLedger
 from .recovery import audit_drive, restore_page_cache
 from .render import render_local_file
 from .service import IngestionService, IngestionSettings
+from .workbench import WorkbenchClient
 
 
 def _print_event(event: str, payload: dict[str, object]) -> None:
@@ -65,15 +66,22 @@ def _parser() -> argparse.ArgumentParser:
 def _sync_once(config: SyncRuntimeConfig) -> tuple[dict[str, int], bool]:
     drive = _drive(config.drive)
     layout = drive.resolve_layout(config.drive.root_folder_id)
-    label_studio = LabelStudioClient(
-        config.label_studio_url,
-        config.label_studio_token,
-        config.label_studio_project_id,
-    )
+    if config.annotation_backend == "label_studio":
+        assert config.annotation_project_id is not None
+        annotation_gateway = LabelStudioClient(
+            config.annotation_url,
+            config.annotation_token,
+            config.annotation_project_id,
+        )
+    else:
+        annotation_gateway = WorkbenchClient(
+            config.annotation_url,
+            config.annotation_token,
+        )
     with IngestionLedger(config.drive.ledger_path) as ledger:
         service = IngestionService(
             drive=drive,
-            label_studio=label_studio,
+            annotation_gateway=annotation_gateway,
             ledger=ledger,
             layout=layout,
             settings=IngestionSettings(

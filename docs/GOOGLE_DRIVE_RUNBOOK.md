@@ -78,11 +78,11 @@ The same patient must always use the same patient folder across encounters. Crea
 5. Calculate raw-file and rendered-page SHA-256 values.
 6. Globally deduplicate rendered pages by SHA-256.
 7. Upload new rendered pages into `20_PAGE_STORE`, add provenance properties, and lock them read-only.
-8. Materialize the page into the private Label Studio cache.
-9. Create or reuse one Label Studio task using a deterministic ingestion key.
+8. Materialize the page into the private annotation cache.
+9. Create or reuse one workbench task using a deterministic ingestion key.
 10. Move the original into `10_SOURCE_ARCHIVE`, rename it to its raw SHA-256, add provenance, and lock it.
 
-Permanent source defects move to quarantine. Drive, network, Label Studio, or storage-contract failures leave the original in place and stop the current sync for later retry.
+Permanent source defects move to quarantine. Drive, network, workbench, or storage-contract failures leave the original in place and stop the current sync for later retry.
 
 Run exactly one ingestion worker. The current pilot ledger and Drive query/create sequence are idempotent after crashes but are not a distributed lock for multiple simultaneous workers.
 
@@ -97,13 +97,13 @@ docker compose --profile ingestion run --rm dcal-ingest doctor
 # Process the current inbox once.
 docker compose --profile ingestion run --rm dcal-ingest sync-once
 
-# Start Label Studio, PostgreSQL, and the 60-second polling worker.
+# Start the workbench and the 60-second polling worker.
 docker compose --profile ingestion up -d
 
 # Download and checksum every archived original and page; also verify locks.
 docker compose --profile ingestion run --rm dcal-ingest audit-drive
 
-# Rebuild the local Label Studio page volume from 20_PAGE_STORE.
+# Rebuild the local annotation page cache from 20_PAGE_STORE.
 docker compose --profile ingestion run --rm dcal-ingest restore-cache
 ```
 
@@ -112,8 +112,8 @@ All routine command output is aggregate JSON. It does not print source filenames
 ## Recovery and backup
 
 - Google Drive holds original sources and canonical rendered pages.
-- PostgreSQL holds Label Studio projects, tasks, and annotations; back it up independently.
-- `dcal_ingestion_state` contains the SQLite operational ledger; back up the volume, although task idempotency also reconciles against Label Studio.
+- `dcal_workbench_state` holds tasks and annotation revisions; back it up independently and consistently with its SQLite WAL.
+- `dcal_ingestion_state` contains the SQLite operational ledger; back up the volume, although task idempotency also reconciles against the workbench.
 - `dcal_page_cache` is disposable and can be rebuilt with `restore-cache`.
 - Preserve the HMAC key in a secure secret manager and an offline recovery record. Losing it makes new grouping identifiers incompatible with existing data.
 
@@ -122,11 +122,11 @@ Run `audit-drive` on a schedule and before freezing every dataset release. Any c
 ## Access controls
 
 - Uploaders should access only the intake area needed for their work.
-- Annotators normally require Label Studio access, not Drive access.
+- Annotators normally require workbench access, not Drive access.
 - Limit human Shared Drive manager/organizer roles because those users can remove
   content restrictions. The dedicated ingestion identity also has this power and
   must be treated as a privileged credential.
 - Do not use public links.
-- Internet-facing Label Studio still requires HTTPS, network restriction, backups, and institutional approval.
+- The workbench has no human authentication in the private pilot. Never expose it beyond loopback until the security gate in `WORKBENCH_RUNBOOK.md` is complete.
 
-Google documents [custom `appProperties`](https://developers.google.com/workspace/drive/api/guides/properties), [content restrictions](https://developers.google.com/workspace/drive/api/guides/content-restrictions), and [resumable uploads](https://developers.google.com/workspace/drive/api/guides/manage-uploads). Label Studio documents the authenticated [local-file task path](https://labelstud.io/guide/storage_local) and [`POST /api/tasks/`](https://api.labelstud.io/api-reference/api-reference/tasks/create).
+Google documents [custom `appProperties`](https://developers.google.com/workspace/drive/api/guides/properties), [content restrictions](https://developers.google.com/workspace/drive/api/guides/content-restrictions), and [resumable uploads](https://developers.google.com/workspace/drive/api/guides/manage-uploads).

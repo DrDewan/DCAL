@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class PageRecord:
     encounter_group_id: str
     page_index: int
     local_path: str
-    label_studio_task_id: int
+    annotation_task_id: int
 
 
 class IngestionLedger:
@@ -66,7 +66,7 @@ class IngestionLedger:
                     encounter_group_id TEXT NOT NULL,
                     page_index INTEGER NOT NULL,
                     local_path TEXT NOT NULL,
-                    label_studio_task_id INTEGER NOT NULL,
+                    annotation_task_id INTEGER NOT NULL,
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
 
@@ -104,6 +104,13 @@ class IngestionLedger:
                     FROM pages
                     """
                 )
+                self._migrate_task_id_column()
+                self.connection.execute(
+                    "UPDATE ledger_meta SET value=? WHERE key='schema_version'",
+                    (str(SCHEMA_VERSION),),
+                )
+            elif int(row["value"]) == 2:
+                self._migrate_task_id_column()
                 self.connection.execute(
                     "UPDATE ledger_meta SET value=? WHERE key='schema_version'",
                     (str(SCHEMA_VERSION),),
@@ -113,13 +120,49 @@ class IngestionLedger:
                     f"unsupported ingestion ledger schema {row['value']!r}"
                 )
 
+    def _migrate_task_id_column(self) -> None:
+        columns = {
+            row["name"]
+            for row in self.connection.execute("PRAGMA table_info(pages)")
+        }
+        if "annotation_task_id" in columns:
+            return
+        if "label_studio_task_id" not in columns:
+            raise RuntimeError("ingestion ledger pages table has no task ID column")
+        self.connection.executescript(
+            """
+            ALTER TABLE pages RENAME TO pages_v2;
+            CREATE TABLE pages (
+                page_sha256 TEXT PRIMARY KEY,
+                source_object_id TEXT NOT NULL,
+                patient_group_id TEXT NOT NULL,
+                encounter_group_id TEXT NOT NULL,
+                page_index INTEGER NOT NULL,
+                local_path TEXT NOT NULL,
+                annotation_task_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            INSERT INTO pages(
+                page_sha256, source_object_id, patient_group_id,
+                encounter_group_id, page_index, local_path,
+                annotation_task_id, created_at
+            )
+            SELECT
+                page_sha256, source_object_id, patient_group_id,
+                encounter_group_id, page_index, local_path,
+                label_studio_task_id, created_at
+            FROM pages_v2;
+            DROP TABLE pages_v2;
+            """
+        )
+
     def page(self, page_sha256: str) -> PageRecord | None:
         row = self.connection.execute(
             """
             SELECT
                 pages.page_sha256,
                 pages.local_path,
-                pages.label_studio_task_id,
+                pages.annotation_task_id,
                 source_pages.source_key,
                 source_pages.source_object_id,
                 source_pages.patient_group_id,
@@ -143,7 +186,7 @@ class IngestionLedger:
             encounter_group_id=row["encounter_group_id"],
             page_index=row["page_index"],
             local_path=row["local_path"],
-            label_studio_task_id=row["label_studio_task_id"],
+            annotation_task_id=row["annotation_task_id"],
         )
 
     def record_page(self, record: PageRecord) -> None:
@@ -153,11 +196,11 @@ class IngestionLedger:
                 INSERT INTO pages(
                     page_sha256, source_object_id, patient_group_id,
                     encounter_group_id, page_index, local_path,
-                    label_studio_task_id
+                    annotation_task_id
                 ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(page_sha256) DO UPDATE SET
                     local_path=excluded.local_path,
-                    label_studio_task_id=excluded.label_studio_task_id
+                    annotation_task_id=excluded.annotation_task_id
                 """,
                 (
                     record.page_sha256,
@@ -166,7 +209,7 @@ class IngestionLedger:
                     record.encounter_group_id,
                     record.page_index,
                     record.local_path,
-                    record.label_studio_task_id,
+                    record.annotation_task_id,
                 ),
             )
             self.connection.execute(
