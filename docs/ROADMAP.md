@@ -4,29 +4,31 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 
 ## M0 — Annotation foundation
 
-**Status:** Code complete; operational usability gate pending
+**Status:** Superseded foundation retained for compatibility
 
-- Self-hosted Label Studio and PostgreSQL.
+- Optional self-hosted Label Studio and PostgreSQL compatibility stack.
 - Versioned BMCH taxonomy and single-page annotation configuration.
 - Strict Label Studio export validation.
 - Deterministic `dcal.gold.v1` normalization.
 - Synthetic tests and CI.
 
-**Exit gate:** configuration loads in Label Studio, synthetic export passes, malformed exports fail, and a human pilot confirms the controls are usable.
+**Exit gate:** historical contract complete; the usability gate moves to M1 under the first-party workbench.
 
 ## M1 — Secure ingestion and pilot
 
-**Status:** Active — implementation complete; dedicated Drive activation and pilot pending
+**Status:** Active — workbench and ingestion code complete; deployment and pilot pending
 
+- First-party annotation workbench with page queue, progress, upload, document/content identification, typed boxes, transcription, autosave, optimistic locking, and revision history.
 - Dedicated Google Drive discovery and versioned folder bootstrap.
 - Checksum-addressed source/page archive with Drive content restrictions and audit.
 - Checksums, opaque patient/encounter grouping, and global page duplicate detection.
-- Idempotent task creation through the Label Studio API.
+- Idempotent task creation through the private workbench API.
 - Rebuildable local annotation cache and persistent operational ledger.
+- Deterministic gold export that excludes provenance-incomplete browser uploads.
 - Pilot of 50 pages per confirmed physical type.
 - Measured annotation time, disagreements, and taxonomy gaps.
 
-**Exit gate:** no source/annotation identity gaps and pilot adjudication complete.
+**Exit gate:** private deployment security is approved, no source/annotation identity gaps remain, and a human pilot confirms that box drawing, resizing, transcription, autosave, and completion are usable.
 
 ## M2 — Dataset registry and quality workflow
 
@@ -34,7 +36,7 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 
 - Versioned dataset releases.
 - Patient- and writer-separated train/validation/sealed-test splits.
-- Reviewer/adjudication workflow independent of Label Studio edition.
+- Reviewer/adjudication workflow in the first-party workbench.
 - Hidden gold tasks, annotator quality reports, and revision history.
 
 ## M3 — Baseline classification and printed text

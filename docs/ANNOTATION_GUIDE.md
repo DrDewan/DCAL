@@ -6,23 +6,29 @@ Annotate one page image at a time. Use the physical page itself—not its Drive 
 
 ## Workflow
 
-1. Inspect the full page and select its physical document type.
-2. Select a known visual variant only when the layout genuinely matches that registered variant.
+1. Open a page from the work queue and inspect the whole page at **Fit** zoom.
+2. Select its physical document type and page content profile. Select a visual variant only when the layout genuinely matches a registered variant.
 3. Mark every applicable image-quality problem.
-4. Draw a tight rectangle around each meaningful variable region or text line.
-5. Select the region label.
-6. Enter its top-to-bottom, left-to-right reading-order number.
-7. Select legibility and, where applicable, the semantic clinical region.
-8. Transcribe exactly what is visible. Do not correct spelling, expand abbreviations, normalize dates, or infer missing words.
-9. Add an optional stable field code only when one has been defined by the project lead.
-10. Review the page, then submit.
+4. Choose **Fixed**, **Variable**, **Writing**, **Choice**, or **Grid**, then draw a tight rectangle around one meaningful region. Drag inside a selected box to move it; drag a corner to resize it.
+5. Confirm the region type, top-to-bottom/left-to-right reading order, legibility, and structure.
+6. Transcribe exactly what is visible. Do not correct spelling, expand abbreviations, normalize dates, or infer missing words.
+7. Add an optional stable field code only when one has been defined by the project lead.
+8. Repeat until the meaningful page content is represented, review the region list, then select **Complete page**.
+
+Drafts autosave after a short pause. `Ctrl/Cmd+S` saves immediately. `F` selects fixed printed text, `D` variable printed text, `H` handwriting, `C` choice marks, `G` grid/other, and `V` selection mode. Hold Space while dragging to pan.
 
 ## Region granularity
 
 - Prefer one bounding box per handwriting line or meaningful fixed-form field.
 - Keep a multi-line phrase together when splitting it would destroy meaning.
 - Do not draw one box per individual character or word unless a later specialist protocol explicitly requires it.
-- Do not include static printed boilerplate in every annotation when it is represented by a registered template; annotate variable printed content and any boilerplate that materially differs from the template.
+- During template discovery, annotate representative static printed labels and every variable field location. After a template variant is registered, do not repeatedly box unchanged boilerplate on every sample; annotate variable content and material template drift.
+
+For a fully printed document with no handwritten content, choose one of:
+
+- `printed_blank_form` when it is an unfilled reusable form; mark fixed labels and empty variable field locations.
+- `printed_filled_form` when machine-printed values fill a form; mark fixed template anchors and each variable typed value.
+- `printed_document` when the page is not a fillable form; mark meaningful printed blocks in reading order.
 
 ## Labels
 

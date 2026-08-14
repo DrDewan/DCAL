@@ -110,3 +110,7 @@ class DriveContractError(RuntimeError):
 
 class LabelStudioError(RuntimeError):
     """A safe Label Studio integration failure with no task data in the message."""
+
+
+class AnnotationGatewayError(RuntimeError):
+    """A safe first-party annotation-workbench integration failure."""

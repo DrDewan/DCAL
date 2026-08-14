@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .cache import label_studio_local_url, page_relative_path, write_page_cache
 from .identity import opaque_id, task_ingestion_key, validate_hmac_key
-from .interfaces import DriveGateway, LabelStudioGateway
+from .interfaces import AnnotationGateway, DriveGateway
 from .ledger import IngestionLedger, PageRecord
 from .models import (
     INGESTION_SCHEMA,
@@ -35,13 +35,13 @@ class IngestionService:
         self,
         *,
         drive: DriveGateway,
-        label_studio: LabelStudioGateway,
+        annotation_gateway: AnnotationGateway,
         ledger: IngestionLedger,
         layout: DriveLayout,
         settings: IngestionSettings,
     ):
         self.drive = drive
-        self.label_studio = label_studio
+        self.annotation_gateway = annotation_gateway
         self.ledger = ledger
         self.layout = layout
         self.settings = settings
@@ -135,7 +135,7 @@ class IngestionService:
                     "render_profile": page.render_profile,
                     "dcal_ingestion_key": ingestion_key,
                 }
-                task_id = self.label_studio.create_task(task_data)
+                task_id = self.annotation_gateway.create_task(task_data)
                 task_index[ingestion_key] = task_id
                 summary.tasks_created += 1
             else:
@@ -150,7 +150,7 @@ class IngestionService:
                     encounter_group_id=encounter_group_id,
                     page_index=page.page_index,
                     local_path=page_relative_path(page.sha256).as_posix(),
-                    label_studio_task_id=task_id,
+                    annotation_task_id=task_id,
                 )
             )
 
@@ -175,7 +175,7 @@ class IngestionService:
         summary = SyncSummary()
         candidates, layout_errors = self.drive.scan_inbox(self.layout)
         summary.layout_errors = layout_errors
-        task_index = self.label_studio.task_index()
+        task_index = self.annotation_gateway.task_index()
         for candidate in candidates:
             summary.sources_seen += 1
             patient_group_id, encounter_group_id, source_key = self._identities(candidate)

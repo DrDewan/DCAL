@@ -10,9 +10,9 @@ DCAL and DCRP have separate repositories, deployments, databases, credentials, a
 
 ## Components
 
-1. **Ingestion service** — scans a dedicated Drive, renders pages, calculates checksums, generates opaque grouping IDs, archives originals/pages under content restrictions, and creates idempotent Label Studio tasks. Implemented for the pilot.
-2. **Label Studio** — human annotation user interface. It displays a single page, page-type controls, quality flags, and region transcription tools.
-3. **Dataset adapter** — validates Label Studio output and converts it into the stable `dcal.gold.v1` contract. This repository implements the first adapter.
+1. **Ingestion service** — scans a dedicated Drive, renders pages, calculates checksums, generates opaque grouping IDs, archives originals/pages under content restrictions, and creates idempotent workbench tasks. Implemented for the pilot.
+2. **DCAL workbench** — first-party human annotation interface and operational SQLite state. It provides upload, queueing, page/content identification, quality flags, typed regions, transcription, autosave, optimistic concurrency, completion, and revision history.
+3. **Dataset adapter/export** — validates completed workbench state and converts provenance-complete pages into stable `dcal.gold.v1`. The prior Label Studio adapter remains for compatibility.
 4. **Dataset registry** — freezes releases and patient/writer-separated train, validation, and sealed-test splits. Planned.
 5. **Experiment runner** — launches reproducible CPU/GPU challengers and records code, container, configuration, cost, latency, and metrics. Planned.
 6. **Model registry** — promotes a challenger only after regression gates pass. Planned.
@@ -41,8 +41,8 @@ Reusable improvements from all challengers are recorded in `docs/WINNING_COMPONE
 flowchart TD
     A["Dedicated Drive inbox"] --> B["Locked source and page store"]
     B --> C["Derived local cache and task"]
-    C --> D["Human annotation"]
-    D --> E["DCAL validator"]
+    C --> D["DCAL workbench annotation"]
+    D --> E["Contract validation and eligibility gate"]
     E --> F["Versioned gold dataset"]
     F --> G["CPU/GPU experiment"]
     G --> H{"Regression gates"}
@@ -51,17 +51,17 @@ flowchart TD
     I -. "future versioned API" .-> J["DCRP"]
 ```
 
-## Why the Label Studio database is not canonical
+## Why operational annotation state is not canonical
 
-Label Studio is optimized for interactive annotation and can change its export representation across configurations and versions. DCAL therefore stores immutable normalized dataset releases outside Label Studio. The adapter rejects ambiguous multiple annotations rather than silently picking one.
+The workbench SQLite database and optional Label Studio database are mutable collaboration state. DCAL therefore stores immutable normalized dataset releases outside either interface. Only completed pages with opaque patient/encounter provenance may enter a gold release.
 
 ## Security baseline
 
-- Label Studio is self-hosted with PostgreSQL.
-- Public signup is disabled; invitations are required.
-- SSRF protection is enabled.
-- Product analytics are disabled.
-- Raw images and canonical rendered pages live in the dedicated Drive; only the derived checksum-addressed cache is mounted read-only into Label Studio.
+- The workbench is self-hosted and bound to `127.0.0.1` by default.
+- Its ingestion route requires a separate bearer secret; request logs suppress paths, names, IDs, and document content.
+- Browser upload is excluded from dataset export until Drive provenance upgrades the checksum-addressed page.
+- Raw images and canonical rendered pages live in the dedicated Drive; the local checksum-addressed cache is rebuildable.
+- The optional Label Studio compatibility profile retains disabled public signup, SSRF protection, and disabled product analytics.
 - Drive objects are content restricted and audited, but Drive is not represented as true write-once storage.
 - Internet-facing deployment requires HTTPS, network restriction, backups, access logging, and an institutional data-governance decision. The provided Compose file is a private pilot baseline, not a declaration of regulatory compliance.
 

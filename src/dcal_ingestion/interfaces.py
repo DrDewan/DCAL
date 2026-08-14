@@ -45,7 +45,11 @@ class DriveGateway(Protocol):
     def list_stored_files(self, folder_id: str) -> list[StoredDriveFile]: ...
 
 
-class LabelStudioGateway(Protocol):
+class AnnotationGateway(Protocol):
     def task_index(self) -> dict[str, int]: ...
 
     def create_task(self, data: dict[str, object]) -> int: ...
+
+
+# Compatibility name for the optional legacy adapter.
+LabelStudioGateway = AnnotationGateway

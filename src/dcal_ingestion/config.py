@@ -48,25 +48,37 @@ class DriveRuntimeConfig:
 class SyncRuntimeConfig:
     drive: DriveRuntimeConfig
     hmac_key: bytes
-    label_studio_url: str
-    label_studio_token: str
-    label_studio_project_id: int
+    annotation_backend: str
+    annotation_url: str
+    annotation_token: str
+    annotation_project_id: int | None
 
     @classmethod
     def from_env(cls) -> "SyncRuntimeConfig":
-        raw_project_id = _required("DCAL_LABEL_STUDIO_PROJECT_ID")
-        try:
-            project_id = int(raw_project_id)
-        except ValueError as error:
-            raise ValueError("DCAL_LABEL_STUDIO_PROJECT_ID must be an integer") from error
-        if project_id < 1:
-            raise ValueError("DCAL_LABEL_STUDIO_PROJECT_ID must be positive")
+        backend = os.environ.get("DCAL_ANNOTATION_BACKEND", "workbench").strip().lower()
+        if backend not in {"workbench", "label_studio"}:
+            raise ValueError("DCAL_ANNOTATION_BACKEND must be workbench or label_studio")
+        project_id: int | None = None
+        if backend == "label_studio":
+            raw_project_id = _required("DCAL_LABEL_STUDIO_PROJECT_ID")
+            try:
+                project_id = int(raw_project_id)
+            except ValueError as error:
+                raise ValueError("DCAL_LABEL_STUDIO_PROJECT_ID must be an integer") from error
+            if project_id < 1:
+                raise ValueError("DCAL_LABEL_STUDIO_PROJECT_ID must be positive")
+            annotation_url = _required("DCAL_LABEL_STUDIO_URL")
+            annotation_token = _required("LABEL_STUDIO_API_TOKEN")
+        else:
+            annotation_url = _required("DCAL_WORKBENCH_URL")
+            annotation_token = _required("DCAL_WORKBENCH_INGEST_TOKEN")
         hmac_key = _required("DCAL_GROUP_HMAC_KEY").encode("utf-8")
         validate_hmac_key(hmac_key)
         return cls(
             drive=DriveRuntimeConfig.from_env(),
             hmac_key=hmac_key,
-            label_studio_url=_required("DCAL_LABEL_STUDIO_URL"),
-            label_studio_token=_required("LABEL_STUDIO_API_TOKEN"),
-            label_studio_project_id=project_id,
+            annotation_backend=backend,
+            annotation_url=annotation_url,
+            annotation_token=annotation_token,
+            annotation_project_id=project_id,
         )

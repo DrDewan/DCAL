@@ -2,6 +2,7 @@ name: dcal
 
 services:
   db:
+    profiles: ["legacy-label-studio"]
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -17,6 +18,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   label-studio:
+    profiles: ["legacy-label-studio"]
     image: ${LABEL_STUDIO_IMAGE:-heartexlabs/label-studio:1.23.0}
     restart: unless-stopped
     depends_on:
@@ -46,6 +48,30 @@ services:
       - label_studio_data:/label-studio/data
       - dcal_page_cache:/label-studio/files:ro
 
+  workbench:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dcal-workbench:local
+    restart: unless-stopped
+    ports:
+      - "${DCAL_WORKBENCH_BIND_IP:-127.0.0.1}:${DCAL_WORKBENCH_PORT:-8090}:8090"
+    environment:
+      DCAL_WORKBENCH_HOST: 0.0.0.0
+      DCAL_WORKBENCH_PORT: 8090
+      DCAL_WORKBENCH_DATABASE: /app/data/state/workbench.sqlite3
+      DCAL_PAGE_CACHE_ROOT: /app/data/images
+      DCAL_WORKBENCH_INGEST_TOKEN: ${DCAL_WORKBENCH_INGEST_TOKEN:?Set DCAL_WORKBENCH_INGEST_TOKEN in .env}
+    command: ["workbench"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/api/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - dcal_page_cache:/app/data/images
+      - dcal_workbench_state:/app/data/state
+
   dcal-ingest:
     profiles: ["ingestion"]
     build:
@@ -54,16 +80,16 @@ services:
     image: dcal-ingestion:local
     restart: unless-stopped
     depends_on:
-      label-studio:
-        condition: service_started
+      workbench:
+        condition: service_healthy
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-drive-credentials.json
       GOOGLE_DELEGATED_SUBJECT: ${GOOGLE_DELEGATED_SUBJECT:-}
       DCAL_DRIVE_ROOT_FOLDER_ID: ${DCAL_DRIVE_ROOT_FOLDER_ID:-}
       DCAL_GROUP_HMAC_KEY: ${DCAL_GROUP_HMAC_KEY:-}
-      DCAL_LABEL_STUDIO_URL: ${DCAL_LABEL_STUDIO_INTERNAL_URL:-http://label-studio:8080}
-      DCAL_LABEL_STUDIO_PROJECT_ID: ${DCAL_LABEL_STUDIO_PROJECT_ID:-}
-      LABEL_STUDIO_API_TOKEN: ${LABEL_STUDIO_API_TOKEN:-}
+      DCAL_ANNOTATION_BACKEND: workbench
+      DCAL_WORKBENCH_URL: http://workbench:8090
+      DCAL_WORKBENCH_INGEST_TOKEN: ${DCAL_WORKBENCH_INGEST_TOKEN:?Set DCAL_WORKBENCH_INGEST_TOKEN in .env}
       DCAL_PAGE_CACHE_ROOT: /app/data/images
       DCAL_INGESTION_LEDGER: /app/data/state/ingestion.sqlite3
     command: ["watch", "--interval", "${DCAL_INGESTION_INTERVAL_SECONDS:-60}"]
@@ -75,5 +101,6 @@ services:
 volumes:
   dcal_ingestion_state:
   dcal_page_cache:
+  dcal_workbench_state:
   label_studio_data:
   postgres_data:

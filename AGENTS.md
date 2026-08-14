@@ -11,9 +11,10 @@ Before changing implementation, read in this order:
 3. `docs/ARCHITECTURE.md`
 4. `docs/DATA_CONTRACT.md`
 5. `docs/GOOGLE_DRIVE_RUNBOOK.md` for ingestion, storage, or deployment work
-6. `docs/CHALLENGER_PLAYBOOK.md` for experiment, model, OCR, VLM, Claude, OpenAI, RunPod, or promotion work
-7. `docs/WINNING_COMPONENTS.md` before proposing or changing any challenger
-8. Relevant code and tests
+6. `docs/WORKBENCH_RUNBOOK.md` for annotation UI, API, export, or workbench deployment work
+7. `docs/CHALLENGER_PLAYBOOK.md` for experiment, model, OCR, VLM, Claude, OpenAI, RunPod, or promotion work
+8. `docs/WINNING_COMPONENTS.md` before proposing or changing any challenger
+9. Relevant code and tests
 
 If these artifacts conflict, stop and report the conflict. Authority is roadmap, then decisions, then architecture/data contract, then task wording, then existing code.
 

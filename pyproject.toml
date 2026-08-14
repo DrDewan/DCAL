@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dcal-annotation-tools"
-version = "0.2.0"
-description = "Google Drive ingestion and annotation data tools for DCAL"
+version = "0.3.0"
+description = "First-party annotation workbench, Google Drive ingestion, and gold-data tools for DCAL"
 requires-python = ">=3.11"
 dependencies = [
   "google-api-python-client>=2.179,<3",
@@ -20,9 +20,13 @@ oauth = ["google-auth-oauthlib>=1.2,<2"]
 [project.scripts]
 dcal-annotations = "dcal_annotations.cli:main"
 dcal-ingest = "dcal_ingestion.cli:main"
+dcal-workbench = "dcal_workbench.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+dcal_workbench = ["static/*.html", "static/*.css", "static/*.js"]
