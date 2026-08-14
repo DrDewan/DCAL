@@ -39,13 +39,41 @@ services:
       SSRF_PROTECTION_ENABLED: "true"
       COLLECT_ANALYTICS: "False"
       JSON_LOG: "1"
-      LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: ${LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED:-false}
+      LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: ${LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED:-true}
       LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT: /label-studio/files
     command: ["label-studio", "start", "--no-browser"]
     volumes:
       - label_studio_data:/label-studio/data
-      - ${DCAL_LOCAL_FILES_DIR:-./data/images}:/label-studio/files:ro
+      - dcal_page_cache:/label-studio/files:ro
+
+  dcal-ingest:
+    profiles: ["ingestion"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dcal-ingestion:local
+    restart: unless-stopped
+    depends_on:
+      label-studio:
+        condition: service_started
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-drive-credentials.json
+      GOOGLE_DELEGATED_SUBJECT: ${GOOGLE_DELEGATED_SUBJECT:-}
+      DCAL_DRIVE_ROOT_FOLDER_ID: ${DCAL_DRIVE_ROOT_FOLDER_ID:-}
+      DCAL_GROUP_HMAC_KEY: ${DCAL_GROUP_HMAC_KEY:-}
+      DCAL_LABEL_STUDIO_URL: ${DCAL_LABEL_STUDIO_INTERNAL_URL:-http://label-studio:8080}
+      DCAL_LABEL_STUDIO_PROJECT_ID: ${DCAL_LABEL_STUDIO_PROJECT_ID:-}
+      LABEL_STUDIO_API_TOKEN: ${LABEL_STUDIO_API_TOKEN:-}
+      DCAL_PAGE_CACHE_ROOT: /app/data/images
+      DCAL_INGESTION_LEDGER: /app/data/state/ingestion.sqlite3
+    command: ["watch", "--interval", "${DCAL_INGESTION_INTERVAL_SECONDS:-60}"]
+    volumes:
+      - ${DCAL_GOOGLE_CREDENTIALS_FILE:-./secrets/google-drive-credentials.json}:/run/secrets/google-drive-credentials.json:ro
+      - dcal_page_cache:/app/data/images
+      - dcal_ingestion_state:/app/data/state
 
 volumes:
+  dcal_ingestion_state:
+  dcal_page_cache:
   label_studio_data:
   postgres_data:

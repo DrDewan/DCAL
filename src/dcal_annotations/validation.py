@@ -12,8 +12,10 @@ from .taxonomy import Taxonomy
 
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 FIELD_CODE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+INGESTION_KEY_RE = re.compile(r"^task_[0-9a-f]{32}$")
 ANNOTATION_SCHEMA_VERSION = "dcal.annotation.v1"
 GOLD_SCHEMA_VERSION = "dcal.gold.v1"
+INGESTION_SCHEMA_VERSION = "dcal.ingestion.v1"
 
 
 @dataclass(frozen=True)
@@ -279,6 +281,53 @@ def _normalize_task(task: dict[str, Any], taxonomy: Taxonomy) -> dict[str, Any]:
             f"unsupported annotation schema {schema_version!r}; expected {ANNOTATION_SCHEMA_VERSION!r}"
         )
 
+    ingestion_fields = {
+        "raw_source_sha256": data.get("raw_source_sha256"),
+        "ingestion_schema_version": data.get("ingestion_schema_version"),
+        "render_profile": data.get("render_profile"),
+        "dcal_ingestion_key": data.get("dcal_ingestion_key"),
+    }
+    present_ingestion_fields = {
+        name for name, value in ingestion_fields.items() if value is not None
+    }
+    if present_ingestion_fields and len(present_ingestion_fields) != len(ingestion_fields):
+        missing = sorted(set(ingestion_fields) - present_ingestion_fields)
+        raise ValueError(
+            f"partial ingestion provenance is forbidden; missing fields: {missing!r}"
+        )
+    ingestion_provenance: dict[str, str] | None = None
+    if present_ingestion_fields:
+        raw_source_sha256 = _require_string(
+            ingestion_fields["raw_source_sha256"], "data.raw_source_sha256"
+        )
+        if not SHA256_RE.fullmatch(raw_source_sha256):
+            raise ValueError(
+                "data.raw_source_sha256 must be 64 lowercase hexadecimal characters"
+            )
+        ingestion_schema = _require_string(
+            ingestion_fields["ingestion_schema_version"],
+            "data.ingestion_schema_version",
+        )
+        if ingestion_schema != INGESTION_SCHEMA_VERSION:
+            raise ValueError(
+                f"unsupported ingestion schema {ingestion_schema!r}; "
+                f"expected {INGESTION_SCHEMA_VERSION!r}"
+            )
+        render_profile = _require_string(
+            ingestion_fields["render_profile"], "data.render_profile"
+        )
+        ingestion_key = _require_string(
+            ingestion_fields["dcal_ingestion_key"], "data.dcal_ingestion_key"
+        )
+        if not INGESTION_KEY_RE.fullmatch(ingestion_key):
+            raise ValueError("data.dcal_ingestion_key has an invalid format")
+        ingestion_provenance = {
+            "raw_sha256": raw_source_sha256,
+            "schema_version": ingestion_schema,
+            "render_profile": render_profile,
+            "task_key": ingestion_key,
+        }
+
     writer_group_ids = data.get("writer_group_ids", [])
     if not isinstance(writer_group_ids, list) or not all(
         isinstance(value, str) and value.strip() for value in writer_group_ids
@@ -392,6 +441,8 @@ def _normalize_task(task: dict[str, Any], taxonomy: Taxonomy) -> dict[str, Any]:
         "annotator_notes": notes,
         "regions": regions,
     }
+    if ingestion_provenance is not None:
+        record["source"]["ingestion"] = ingestion_provenance
     canonical = json.dumps(
         record, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")

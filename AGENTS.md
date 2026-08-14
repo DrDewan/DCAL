@@ -10,7 +10,8 @@ Before changing implementation, read in this order:
 2. `docs/DECISIONS.md`
 3. `docs/ARCHITECTURE.md`
 4. `docs/DATA_CONTRACT.md`
-5. Relevant code and tests
+5. `docs/GOOGLE_DRIVE_RUNBOOK.md` for ingestion, storage, or deployment work
+6. Relevant code and tests
 
 If these artifacts conflict, stop and report the conflict. Authority is roadmap, then decisions, then architecture/data contract, then task wording, then existing code.
 
@@ -20,6 +21,8 @@ If these artifacts conflict, stop and report the conflict. Authority is roadmap,
 - Do not add a DCRP database dependency. Future integration is through a versioned inference API only.
 - Never commit PHI, patient images, real annotations, real transcripts, credentials, signed URLs, or storage identifiers that expose patients.
 - Source images are immutable. Identity is the byte-level SHA-256 plus an opaque source object ID.
+- Never log or commit Google Drive object IDs, source filenames, folder names, OAuth credentials, service-account credentials, or the grouping HMAC key.
+- The Drive inbox depth is patient folder, encounter folder, then files. Do not invent fallback grouping when the structure is invalid.
 - Machine output never becomes human ground truth automatically.
 - `unknown_document`, `unknown_region`, and `illegible` are valid outcomes. Do not force certainty.
 - Never tune on the sealed test set. Split by patient and writer before model development.

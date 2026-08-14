@@ -4,7 +4,7 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 
 ## M0 — Annotation foundation
 
-**Status:** Active
+**Status:** Code complete; operational usability gate pending
 
 - Self-hosted Label Studio and PostgreSQL.
 - Versioned BMCH taxonomy and single-page annotation configuration.
@@ -16,12 +16,13 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 
 ## M1 — Secure ingestion and pilot
 
-**Status:** Pending
+**Status:** Active — implementation complete; dedicated Drive activation and pilot pending
 
-- Read-only Google Drive discovery.
-- Immutable private object storage.
-- Checksums, opaque patient/encounter grouping, and duplicate detection.
-- Task creation through the Label Studio API.
+- Dedicated Google Drive discovery and versioned folder bootstrap.
+- Checksum-addressed source/page archive with Drive content restrictions and audit.
+- Checksums, opaque patient/encounter grouping, and global page duplicate detection.
+- Idempotent task creation through the Label Studio API.
+- Rebuildable local annotation cache and persistent operational ledger.
 - Pilot of 50 pages per confirmed physical type.
 - Measured annotation time, disagreements, and taxonomy gaps.
 
