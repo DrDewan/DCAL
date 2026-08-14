@@ -45,6 +45,8 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 - Classifier challengers with explicit unknown handling.
 - Printed variable-text OCR and static-template registration.
 - RunPod/CPU adapters behind common experiment contracts.
+- Provider-neutral challenger specs for OpenAI, Claude, local OCR, and hybrid runners.
+- Shared winning-components workflow so reusable discoveries can be combined across challengers.
 
 ## M4 — Handwriting and structured extraction
 
@@ -54,6 +56,7 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 - Specialist OCR/VLM challengers.
 - Field and table extraction by physical type/variant.
 - Critical-token error analysis and uncertainty calibration.
+- Claude and other VLM challengers evaluated only through frozen snapshots and normalized prediction contracts.
 
 ## M5 — Champion promotion and inference gateway
 
