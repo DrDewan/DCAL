@@ -16,6 +16,12 @@ It is intentionally independent of DCRP. DCAL owns annotation, gold-dataset crea
 
 Not implemented yet: dataset release/split registry, RunPod model workers, active-learning selection, experiment tracking, model promotion, or DCRP integration.
 
+## Challenger system
+
+DCAL will use a champion-versus-challenger workflow for OCR, VLM, classification, transcription, layout, and structured extraction experiments. Challengers may come from OpenAI, Claude, local OCR, Gemini, rules-based preprocessing, or hybrid systems, but every challenger must run against the same frozen dataset snapshots and emit the same normalized prediction contract.
+
+Read [Challenger Playbook](docs/CHALLENGER_PLAYBOOK.md) before building experiment runners, provider adapters, scoring, or promotion logic. Read [Winning Components](docs/WINNING_COMPONENTS.md) before proposing a challenger; it is the shared knowledge base where reusable wins from all challengers are recorded.
+
 ## Local start
 
 Prerequisites: Docker with Docker Compose and Python 3.11 or newer.
@@ -120,4 +126,4 @@ Docker is not required for the Python and configuration tests. CI additionally v
 - Test pages are separated by patient and writer and remain unavailable to model tuning.
 - Label Studio is the annotation user interface, not the canonical dataset or model registry.
 
-Read [Architecture](docs/ARCHITECTURE.md), [Google Drive Runbook](docs/GOOGLE_DRIVE_RUNBOOK.md), [Data Contract](docs/DATA_CONTRACT.md), [Annotation Guide](docs/ANNOTATION_GUIDE.md), and [Roadmap](docs/ROADMAP.md) before extending the system.
+Read [Architecture](docs/ARCHITECTURE.md), [Google Drive Runbook](docs/GOOGLE_DRIVE_RUNBOOK.md), [Data Contract](docs/DATA_CONTRACT.md), [Annotation Guide](docs/ANNOTATION_GUIDE.md), [Challenger Playbook](docs/CHALLENGER_PLAYBOOK.md), [Winning Components](docs/WINNING_COMPONENTS.md), and [Roadmap](docs/ROADMAP.md) before extending the system.
