@@ -1,0 +1,11 @@
+.env
+.git
+.github
+.venv
+data
+exports
+secrets
+**/__pycache__
+*.egg-info
+*.py[cod]
+*.sqlite3*

@@ -43,6 +43,10 @@ class ExportValidationTests(unittest.TestCase):
         self.assertEqual("dcal.gold.v1", record["schema_version"])
         self.assertNotIn("image", record["source"])
         self.assertEqual(
+            "dcal.render.300dpi-rgb-png.v1",
+            record["source"]["ingestion"]["render_profile"],
+        )
+        self.assertEqual(
             ["printed_variable", "handwriting"],
             [region["label"] for region in record["regions"]],
         )
@@ -57,6 +61,11 @@ class ExportValidationTests(unittest.TestCase):
         payload = self.payload()
         self.result(payload, "physical_document_type")["value"]["choices"] = ["invented"]
         self.assert_invalid(payload, "unknown physical document type")
+
+    def test_partial_ingestion_provenance_is_rejected(self) -> None:
+        payload = self.payload()
+        del payload[0]["data"]["render_profile"]
+        self.assert_invalid(payload, "partial ingestion provenance")
 
     def test_variant_must_belong_to_physical_type(self) -> None:
         payload = self.payload()

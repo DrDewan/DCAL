@@ -4,28 +4,31 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 
 ## M0 — Annotation foundation
 
-**Status:** Active
+**Status:** Superseded foundation retained for compatibility
 
-- Self-hosted Label Studio and PostgreSQL.
+- Optional self-hosted Label Studio and PostgreSQL compatibility stack.
 - Versioned BMCH taxonomy and single-page annotation configuration.
 - Strict Label Studio export validation.
 - Deterministic `dcal.gold.v1` normalization.
 - Synthetic tests and CI.
 
-**Exit gate:** configuration loads in Label Studio, synthetic export passes, malformed exports fail, and a human pilot confirms the controls are usable.
+**Exit gate:** historical contract complete; the usability gate moves to M1 under the first-party workbench.
 
 ## M1 — Secure ingestion and pilot
 
-**Status:** Pending
+**Status:** Active — workbench and ingestion code complete; deployment and pilot pending
 
-- Read-only Google Drive discovery.
-- Immutable private object storage.
-- Checksums, opaque patient/encounter grouping, and duplicate detection.
-- Task creation through the Label Studio API.
+- First-party annotation workbench with page queue, progress, upload, document/content identification, typed boxes, transcription, autosave, optimistic locking, and revision history.
+- Dedicated Google Drive discovery and versioned folder bootstrap.
+- Checksum-addressed source/page archive with Drive content restrictions and audit.
+- Checksums, opaque patient/encounter grouping, and global page duplicate detection.
+- Idempotent task creation through the private workbench API.
+- Rebuildable local annotation cache and persistent operational ledger.
+- Deterministic gold export that excludes provenance-incomplete browser uploads.
 - Pilot of 50 pages per confirmed physical type.
 - Measured annotation time, disagreements, and taxonomy gaps.
 
-**Exit gate:** no source/annotation identity gaps and pilot adjudication complete.
+**Exit gate:** private deployment security is approved, no source/annotation identity gaps remain, and a human pilot confirms that box drawing, resizing, transcription, autosave, and completion are usable.
 
 ## M2 — Dataset registry and quality workflow
 
@@ -33,7 +36,7 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 
 - Versioned dataset releases.
 - Patient- and writer-separated train/validation/sealed-test splits.
-- Reviewer/adjudication workflow independent of Label Studio edition.
+- Reviewer/adjudication workflow in the first-party workbench.
 - Hidden gold tasks, annotator quality reports, and revision history.
 
 ## M3 — Baseline classification and printed text
@@ -44,6 +47,8 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 - Classifier challengers with explicit unknown handling.
 - Printed variable-text OCR and static-template registration.
 - RunPod/CPU adapters behind common experiment contracts.
+- Provider-neutral challenger specs for OpenAI, Claude, local OCR, and hybrid runners.
+- Shared winning-components workflow so reusable discoveries can be combined across challengers.
 
 ## M4 — Handwriting and structured extraction
 
@@ -53,6 +58,7 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 - Specialist OCR/VLM challengers.
 - Field and table extraction by physical type/variant.
 - Critical-token error analysis and uncertainty calibration.
+- Claude and other VLM challengers evaluated only through frozen snapshots and normalized prediction contracts.
 
 ## M5 — Champion promotion and inference gateway
 

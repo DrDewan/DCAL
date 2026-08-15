@@ -2,6 +2,7 @@ name: dcal
 
 services:
   db:
+    profiles: ["legacy-label-studio"]
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -17,6 +18,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   label-studio:
+    profiles: ["legacy-label-studio"]
     image: ${LABEL_STUDIO_IMAGE:-heartexlabs/label-studio:1.23.0}
     restart: unless-stopped
     depends_on:
@@ -39,13 +41,66 @@ services:
       SSRF_PROTECTION_ENABLED: "true"
       COLLECT_ANALYTICS: "False"
       JSON_LOG: "1"
-      LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: ${LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED:-false}
+      LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED: ${LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED:-true}
       LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT: /label-studio/files
     command: ["label-studio", "start", "--no-browser"]
     volumes:
       - label_studio_data:/label-studio/data
-      - ${DCAL_LOCAL_FILES_DIR:-./data/images}:/label-studio/files:ro
+      - dcal_page_cache:/label-studio/files:ro
+
+  workbench:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dcal-workbench:local
+    restart: unless-stopped
+    ports:
+      - "${DCAL_WORKBENCH_BIND_IP:-127.0.0.1}:${DCAL_WORKBENCH_PORT:-8090}:8090"
+    environment:
+      DCAL_WORKBENCH_HOST: 0.0.0.0
+      DCAL_WORKBENCH_PORT: 8090
+      DCAL_WORKBENCH_DATABASE: /app/data/state/workbench.sqlite3
+      DCAL_PAGE_CACHE_ROOT: /app/data/images
+      DCAL_WORKBENCH_INGEST_TOKEN: ${DCAL_WORKBENCH_INGEST_TOKEN:?Set DCAL_WORKBENCH_INGEST_TOKEN in .env}
+    command: ["workbench"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/api/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - dcal_page_cache:/app/data/images
+      - dcal_workbench_state:/app/data/state
+
+  dcal-ingest:
+    profiles: ["ingestion"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dcal-ingestion:local
+    restart: unless-stopped
+    depends_on:
+      workbench:
+        condition: service_healthy
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-drive-credentials.json
+      GOOGLE_DELEGATED_SUBJECT: ${GOOGLE_DELEGATED_SUBJECT:-}
+      DCAL_DRIVE_ROOT_FOLDER_ID: ${DCAL_DRIVE_ROOT_FOLDER_ID:-}
+      DCAL_GROUP_HMAC_KEY: ${DCAL_GROUP_HMAC_KEY:-}
+      DCAL_ANNOTATION_BACKEND: workbench
+      DCAL_WORKBENCH_URL: http://workbench:8090
+      DCAL_WORKBENCH_INGEST_TOKEN: ${DCAL_WORKBENCH_INGEST_TOKEN:?Set DCAL_WORKBENCH_INGEST_TOKEN in .env}
+      DCAL_PAGE_CACHE_ROOT: /app/data/images
+      DCAL_INGESTION_LEDGER: /app/data/state/ingestion.sqlite3
+    command: ["watch", "--interval", "${DCAL_INGESTION_INTERVAL_SECONDS:-60}"]
+    volumes:
+      - ${DCAL_GOOGLE_CREDENTIALS_FILE:-./secrets/google-drive-credentials.json}:/run/secrets/google-drive-credentials.json:ro
+      - dcal_page_cache:/app/data/images
+      - dcal_ingestion_state:/app/data/state
 
 volumes:
+  dcal_ingestion_state:
+  dcal_page_cache:
+  dcal_workbench_state:
   label_studio_data:
   postgres_data:

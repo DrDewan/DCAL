@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from unittest.mock import patch
+
+from dcal_ingestion.config import SyncRuntimeConfig
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -91,6 +95,31 @@ class LabelConfigurationTests(unittest.TestCase):
                 control = self.root.find(f".//*[@name='{name}']")
                 self.assertIsNotNone(control)
                 self.assertEqual("true", control.get("perRegion"))
+
+
+class RuntimeConfigurationTests(unittest.TestCase):
+    def test_workbench_is_the_default_annotation_backend(self) -> None:
+        environment = {
+            "DCAL_DRIVE_ROOT_FOLDER_ID": "drive-root",
+            "DCAL_GROUP_HMAC_KEY": "0123456789abcdef0123456789abcdef",
+            "DCAL_WORKBENCH_URL": "http://workbench:8090",
+            "DCAL_WORKBENCH_INGEST_TOKEN": "synthetic-secret-token",
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            config = SyncRuntimeConfig.from_env()
+        self.assertEqual("workbench", config.annotation_backend)
+        self.assertEqual("http://workbench:8090", config.annotation_url)
+        self.assertIsNone(config.annotation_project_id)
+
+    def test_unknown_annotation_backend_is_rejected(self) -> None:
+        environment = {
+            "DCAL_DRIVE_ROOT_FOLDER_ID": "drive-root",
+            "DCAL_GROUP_HMAC_KEY": "0123456789abcdef0123456789abcdef",
+            "DCAL_ANNOTATION_BACKEND": "invented",
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            with self.assertRaisesRegex(ValueError, "workbench or label_studio"):
+                SyncRuntimeConfig.from_env()
 
 
 if __name__ == "__main__":

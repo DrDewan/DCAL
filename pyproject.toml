@@ -4,16 +4,29 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dcal-annotation-tools"
-version = "0.1.0"
-description = "Validation and normalization tools for DCAL Label Studio annotations"
+version = "0.3.0"
+description = "First-party annotation workbench, Google Drive ingestion, and gold-data tools for DCAL"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "google-api-python-client>=2.179,<3",
+  "google-auth>=2.40,<3",
+  "Pillow==12.3.0",
+  "PyMuPDF==1.28.2",
+]
+
+[project.optional-dependencies]
+oauth = ["google-auth-oauthlib>=1.2,<2"]
 
 [project.scripts]
 dcal-annotations = "dcal_annotations.cli:main"
+dcal-ingest = "dcal_ingestion.cli:main"
+dcal-workbench = "dcal_workbench.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+dcal_workbench = ["static/*.html", "static/*.css", "static/*.js"]
