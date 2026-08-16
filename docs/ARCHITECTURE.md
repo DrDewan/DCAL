@@ -10,8 +10,8 @@ DCAL and DCRP have separate repositories, deployments, databases, credentials, a
 
 ## Components
 
-1. **Ingestion service** — scans a dedicated Drive, renders pages, calculates checksums, generates opaque grouping IDs, archives originals/pages under content restrictions, and creates idempotent workbench tasks. Implemented for the pilot.
-2. **DCAL workbench** — first-party human annotation interface and operational SQLite state. It provides upload, queueing, page/content identification, quality flags, typed regions, transcription, autosave, optimistic concurrency, completion, and revision history.
+1. **Ingestion service** — a separate long-lived worker scans a dedicated Drive, renders pages, calculates checksums, generates opaque grouping IDs, archives originals/pages under content restrictions, uploads a private workbench copy, and creates idempotent tasks. It is not a Vercel function.
+2. **DCAL workbench** — a first-party Next.js human annotation interface on Vercel. A DCAL-only Supabase project provides named authentication, operational PostgreSQL state, append-only revisions, and a private working-copy page bucket. The original local SQLite interface remains a compatibility/development path.
 3. **Dataset adapter/export** — validates completed workbench state and converts provenance-complete pages into stable `dcal.gold.v1`. The prior Label Studio adapter remains for compatibility.
 4. **Dataset registry** — freezes releases and patient/writer-separated train, validation, and sealed-test splits. Planned.
 5. **Experiment runner** — launches reproducible CPU/GPU challengers and records code, container, configuration, cost, latency, and metrics. Planned.
@@ -39,31 +39,33 @@ Reusable improvements from all challengers are recorded in `docs/WINNING_COMPONE
 
 ```mermaid
 flowchart TD
-    A["Dedicated Drive inbox"] --> B["Locked source and page store"]
-    B --> C["Derived local cache and task"]
-    C --> D["DCAL workbench annotation"]
-    D --> E["Contract validation and eligibility gate"]
-    E --> F["Versioned gold dataset"]
-    F --> G["CPU/GPU experiment"]
-    G --> H{"Regression gates"}
-    H -->|Fail| G
-    H -->|Pass| I["Promoted model"]
-    I -. "future versioned API" .-> J["DCRP"]
+    A["Dedicated Drive inbox"] --> C["Ingestion worker"]
+    C --> B["Locked source and page store"]
+    C --> D["Private Supabase page and task"]
+    D --> E["Vercel workbench annotation"]
+    E --> F["Contract validation and eligibility gate"]
+    F --> G["Versioned gold dataset"]
+    G --> H["CPU/GPU experiment"]
+    H --> I{"Regression gates"}
+    I -->|Fail| H
+    I -->|Pass| J["Promoted model"]
+    J -. "future versioned API" .-> K["DCRP"]
 ```
 
 ## Why operational annotation state is not canonical
 
-The workbench SQLite database and optional Label Studio database are mutable collaboration state. DCAL therefore stores immutable normalized dataset releases outside either interface. Only completed pages with opaque patient/encounter provenance may enter a gold release.
+The workbench Supabase database, local SQLite database, and optional Label Studio database are mutable collaboration state. DCAL therefore stores immutable normalized dataset releases outside every interface. Only completed pages with opaque patient/encounter provenance may enter a gold release.
 
 ## Security baseline
 
-- The workbench is self-hosted and bound to `127.0.0.1` by default.
-- Its ingestion route requires a separate bearer secret; request logs suppress paths, names, IDs, and document content.
+- Hosted users authenticate with named Supabase Auth accounts. New accounts are inactive until explicitly activated; task/revision tables have deny-all browser policies.
+- Vercel server routes revalidate every session and mediate all database and private-image access with a server-only secret key. Reviewer/admin roles alone can export gold.
+- The ingestion route requires a separate bearer secret. The worker receives a short-lived signed page-upload URL, never the Supabase secret key.
 - Browser upload is excluded from dataset export until Drive provenance upgrades the checksum-addressed page.
-- Raw images and canonical rendered pages live in the dedicated Drive; the local checksum-addressed cache is rebuildable.
+- Raw images and canonical rendered pages live in the dedicated Drive. Supabase Storage and the local checksum-addressed cache are operational copies.
 - The optional Label Studio compatibility profile retains disabled public signup, SSRF protection, and disabled product analytics.
 - Drive objects are content restricted and audited, but Drive is not represented as true write-once storage.
-- Internet-facing deployment requires HTTPS, network restriction, backups, access logging, and an institutional data-governance decision. The provided Compose file is a private pilot baseline, not a declaration of regulatory compliance.
+- Vercel supplies HTTPS, but hosting does not by itself establish clinical compliance. Real material still requires institutional approval, documented access review, backup/restore tests, incident response, retention rules, and confirmation that the selected Vercel/Supabase plans and regions meet policy.
 
 ## Accuracy layers
 

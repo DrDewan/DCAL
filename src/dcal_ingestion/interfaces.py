@@ -48,7 +48,11 @@ class DriveGateway(Protocol):
 class AnnotationGateway(Protocol):
     def task_index(self) -> dict[str, int]: ...
 
-    def create_task(self, data: dict[str, object]) -> int: ...
+    def create_task(
+        self,
+        data: dict[str, object],
+        page: RenderedPage | None = None,
+    ) -> int: ...
 
 
 # Compatibility name for the optional legacy adapter.

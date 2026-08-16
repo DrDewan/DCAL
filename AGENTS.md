@@ -12,9 +12,10 @@ Before changing implementation, read in this order:
 4. `docs/DATA_CONTRACT.md`
 5. `docs/GOOGLE_DRIVE_RUNBOOK.md` for ingestion, storage, or deployment work
 6. `docs/WORKBENCH_RUNBOOK.md` for annotation UI, API, export, or workbench deployment work
-7. `docs/CHALLENGER_PLAYBOOK.md` for experiment, model, OCR, VLM, Claude, OpenAI, RunPod, or promotion work
-8. `docs/WINNING_COMPONENTS.md` before proposing or changing any challenger
-9. Relevant code and tests
+7. `docs/DEPLOYMENT_RUNBOOK.md` for hosted Vercel, Supabase, user, secret, or worker setup
+8. `docs/CHALLENGER_PLAYBOOK.md` for experiment, model, OCR, VLM, Claude, OpenAI, RunPod, or promotion work
+9. `docs/WINNING_COMPONENTS.md` before proposing or changing any challenger
+10. Relevant code and tests
 
 If these artifacts conflict, stop and report the conflict. Authority is roadmap, then decisions, then architecture/data contract, then task wording, then existing code.
 

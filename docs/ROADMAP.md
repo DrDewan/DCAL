@@ -16,7 +16,7 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 
 ## M1 — Secure ingestion and pilot
 
-**Status:** Active — workbench and ingestion code complete; deployment and pilot pending
+**Status:** Active — hosted foundation complete; account setup, Drive connection, and pilot pending
 
 - First-party annotation workbench with page queue, progress, upload, document/content identification, typed boxes, transcription, autosave, optimistic locking, and revision history.
 - Dedicated Google Drive discovery and versioned folder bootstrap.
@@ -25,6 +25,8 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 - Idempotent task creation through the private workbench API.
 - Rebuildable local annotation cache and persistent operational ledger.
 - Deterministic gold export that excludes provenance-incomplete browser uploads.
+- Authenticated Vercel workbench with inactive-by-default named accounts, role-gated export, server-mediated data access, and private Supabase page storage.
+- DCAL-only Supabase schema, append-only revisions, optimistic-locking functions, RLS deny policies, and migration history.
 - Pilot of 50 pages per confirmed physical type.
 - Measured annotation time, disagreements, and taxonomy gaps.
 

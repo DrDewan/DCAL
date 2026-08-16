@@ -6,7 +6,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from .models import LabelStudioError
+from .models import LabelStudioError, RenderedPage
 
 
 class LabelStudioClient:
@@ -88,7 +88,12 @@ class LabelStudioClient:
                 return index
             page += 1
 
-    def create_task(self, data: dict[str, object]) -> int:
+    def create_task(
+        self,
+        data: dict[str, object],
+        page: RenderedPage | None = None,
+    ) -> int:
+        del page  # Label Studio reads from the existing private local page cache.
         payload = self._request(
             "/api/tasks/",
             method="POST",

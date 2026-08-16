@@ -73,13 +73,13 @@ The same patient must always use the same patient folder across encounters. Crea
 
 1. Enumerate patient and encounter folders.
 2. Accept PDF, JPEG, PNG, TIFF, WebP, and BMP up to 250 MiB and 500 pages.
-3. Reject encrypted PDFs, malformed files, decompression bombs, and pages above 150 million pixels.
+3. Reject encrypted PDFs, malformed files, decompression bombs, pages above 150 million pixels, and rendered PNGs above the hosted 25 MiB object limit.
 4. Render PDF pages at 300 DPI and normalize all pages to RGB PNG.
 5. Calculate raw-file and rendered-page SHA-256 values.
 6. Globally deduplicate rendered pages by SHA-256.
 7. Upload new rendered pages into `20_PAGE_STORE`, add provenance properties, and lock them read-only.
-8. Materialize the page into the private annotation cache.
-9. Create or reuse one workbench task using a deterministic ingestion key.
+8. Materialize the page into the worker cache and, for the hosted workbench, upload it through a short-lived signed URL into the private Supabase working bucket.
+9. Create or reuse one workbench task using a deterministic ingestion key. The worker uses a dedicated ingestion bearer token and never receives the Supabase secret key.
 10. Move the original into `10_SOURCE_ARCHIVE`, rename it to its raw SHA-256, add provenance, and lock it.
 
 Permanent source defects move to quarantine. Drive, network, workbench, or storage-contract failures leave the original in place and stop the current sync for later retry.
@@ -89,6 +89,16 @@ Run exactly one ingestion worker. The current pilot ledger and Drive query/creat
 Pillow and PyMuPDF are exactly pinned because changing a renderer can change canonical PNG bytes and therefore page identities. Any renderer upgrade requires a new render profile and an explicit migration decision.
 
 ## Commands
+
+For the hosted workbench, set `DCAL_WORKBENCH_URL` to its public HTTPS Vercel URL and use the exact same `DCAL_WORKBENCH_INGEST_TOKEN` in the worker and Vercel. Run only the ingestion service; it no longer requires a local workbench container:
+
+```bash
+docker compose --profile ingestion run --rm --no-deps dcal-ingest doctor
+docker compose --profile ingestion run --rm --no-deps dcal-ingest sync-once
+docker compose --profile ingestion up -d dcal-ingest
+```
+
+For a completely local compatibility stack, leave `DCAL_WORKBENCH_URL=http://workbench:8090` and start both services.
 
 ```bash
 # Verify credentials and the six required folder roles.
@@ -112,7 +122,7 @@ All routine command output is aggregate JSON. It does not print source filenames
 ## Recovery and backup
 
 - Google Drive holds original sources and canonical rendered pages.
-- `dcal_workbench_state` holds tasks and annotation revisions; back it up independently and consistently with its SQLite WAL.
+- Hosted Supabase PostgreSQL holds tasks and annotation revisions; back it up independently and test recovery. The local compatibility server instead uses `dcal_workbench_state` and its SQLite WAL.
 - `dcal_ingestion_state` contains the SQLite operational ledger; back up the volume, although task idempotency also reconciles against the workbench.
 - `dcal_page_cache` is disposable and can be rebuilt with `restore-cache`.
 - Preserve the HMAC key in a secure secret manager and an offline recovery record. Losing it makes new grouping identifiers incompatible with existing data.
@@ -127,6 +137,6 @@ Run `audit-drive` on a schedule and before freezing every dataset release. Any c
   content restrictions. The dedicated ingestion identity also has this power and
   must be treated as a privileged credential.
 - Do not use public links.
-- The workbench has no human authentication in the private pilot. Never expose it beyond loopback until the security gate in `WORKBENCH_RUNBOOK.md` is complete.
+- Hosted annotators use named, explicitly activated Supabase Auth accounts and do not receive Drive access. The local compatibility workbench still has no human authentication and must remain on loopback.
 
 Google documents [custom `appProperties`](https://developers.google.com/workspace/drive/api/guides/properties), [content restrictions](https://developers.google.com/workspace/drive/api/guides/content-restrictions), and [resumable uploads](https://developers.google.com/workspace/drive/api/guides/manage-uploads).

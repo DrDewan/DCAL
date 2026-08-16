@@ -5,6 +5,7 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from PIL import Image
 
@@ -15,7 +16,11 @@ from dcal_ingestion.models import (
     RenderedPage,
     StoredDriveFile,
 )
-from dcal_ingestion.service import IngestionService, IngestionSettings
+from dcal_ingestion.service import (
+    MAX_ANNOTATION_PAGE_BYTES,
+    IngestionService,
+    IngestionSettings,
+)
 
 
 TEST_KEY = b"0123456789abcdef0123456789abcdef"
@@ -105,9 +110,15 @@ class FakeLabelStudio:
     def task_index(self) -> dict[str, int]:
         return dict(self.index)
 
-    def create_task(self, data: dict[str, object]) -> int:
+    def create_task(
+        self,
+        data: dict[str, object],
+        page: RenderedPage | None = None,
+    ) -> int:
         if self.fail_create:
             raise RuntimeError("synthetic infrastructure failure")
+        if page is None:
+            raise AssertionError("rendered page is required")
         task_id = len(self.tasks) + 100
         self.tasks[task_id] = copy.deepcopy(data)
         self.index[str(data["dcal_ingestion_key"])] = task_id
@@ -229,6 +240,31 @@ class IngestionServiceTests(unittest.TestCase):
             self.assertEqual(
                 [(candidate.file_id, "unsupported_media_type")], drive.quarantined
             )
+
+    def test_oversized_rendered_page_is_quarantined_before_task_creation(self) -> None:
+        candidate = self.candidate()
+        drive = FakeDrive([candidate], {candidate.file_id: synthetic_png()})
+        label_studio = FakeLabelStudio()
+        oversized = RenderedPage(
+            page_index=1,
+            content=b"x" * (MAX_ANNOTATION_PAGE_BYTES + 1),
+            sha256="a" * 64,
+            width=100,
+            height=100,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            service, ledger = self.service(directory, drive, label_studio)
+            try:
+                with patch("dcal_ingestion.service.render_source", return_value=[oversized]):
+                    summary = service.sync_once()
+            finally:
+                ledger.close()
+        self.assertEqual(1, summary.sources_quarantined)
+        self.assertEqual(
+            [(candidate.file_id, "rendered_page_too_large")],
+            drive.quarantined,
+        )
+        self.assertEqual({}, label_studio.tasks)
 
     def test_infrastructure_failure_leaves_source_out_of_quarantine(self) -> None:
         candidate = self.candidate()

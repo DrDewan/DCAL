@@ -17,14 +17,17 @@ Every workbench task admitted to a gold dataset must originate from an ingestion
     "annotation_schema_version": "dcal.annotation.v1",
     "ingestion_schema_version": "dcal.ingestion.v1",
     "render_profile": "dcal.render.300dpi-rgb-png.v1",
-    "dcal_ingestion_key": "task_<32 lowercase hex characters>"
+    "dcal_ingestion_key": "task_<32 lowercase hex characters>",
+    "storage_path": "pages/<first two SHA-256 characters>/<SHA-256>.png",
+    "image_width": 2480,
+    "image_height": 3508
   }
 }
 ```
 
 `patient_group_id` and `encounter_group_id` must be generated with a keyed HMAC or a secure random mapping. The Drive adapter HMACs stable patient-folder and encounter-folder IDs; it never exports their names or raw Drive IDs. A plain or unsalted hash of a hospital number is vulnerable to dictionary recovery and is forbidden.
 
-The image URI is used only during task creation. The workbench stores a verified cache-relative path; the normalized gold record excludes paths, ephemeral URLs, and signed URLs.
+The legacy `image` URI is used only by the local/Label Studio compatibility path. The deployed workbench uploads the rendered bytes through a short-lived signed upload URL, then stores the checksum-derived private Supabase Storage path. The normalized gold record excludes paths, ephemeral URLs, and signed URLs.
 
 Ingestion provenance is an all-or-none bundle. Manually created legacy tasks may omit the whole bundle, but a task may not contain a partial raw hash, render profile, ingestion schema, or ingestion key. `source_sha256` identifies the exact page bytes used for annotation and model training. `raw_source_sha256` identifies the original uploaded object.
 
@@ -56,7 +59,7 @@ Each successful save increments an integer version and appends a revision contai
 - Zero or more image-quality flags.
 - Page notes are optional.
 
-Clinical pages require at least one region. Blank, duplicate, cover, billing, and unknown pages may legitimately contain no OCR regions.
+Clinical pages, including financial/billing documents, require at least one region. Blank, duplicate, non-clinical cover, and unknown pages may legitimately contain no OCR regions.
 
 ## Required region annotation
 
@@ -73,7 +76,7 @@ Textual regions marked `legible` or `partially_legible` require transcription. `
 
 ## Dataset eligibility
 
-Browser-uploaded pilot pages lack trustworthy patient and encounter grouping. They may be annotated and revisioned but are excluded from `dcal.gold.v1` export. When the Drive ingester later submits the same page checksum with complete opaque provenance, the existing task is upgraded to dataset-eligible without discarding its annotation.
+Browser-uploaded pilot pages lack trustworthy patient and encounter grouping. They may be annotated and revisioned but are excluded from `dcal.gold.v1` export. When the Drive ingester later submits the same canonical page checksum or exact raw-image checksum with complete opaque provenance, the existing task is upgraded to dataset-eligible without discarding its annotation. Client-resized browser images may not match and should be treated as UI pilots only.
 
 Completed pages remain working state until a later dataset-registry milestone freezes them into a versioned, split manifest. A completed row is not automatically a training release.
 
