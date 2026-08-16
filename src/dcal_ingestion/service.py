@@ -19,6 +19,7 @@ from .render import MAX_SOURCE_BYTES, SUPPORTED_IMAGE_MIME_TYPES, render_source
 
 
 SUPPORTED_SOURCE_MIME_TYPES = SUPPORTED_IMAGE_MIME_TYPES | {"application/pdf"}
+MAX_ANNOTATION_PAGE_BYTES = 25 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,11 @@ class IngestionService:
         )
         raw_sha256 = hashlib.sha256(raw_content).hexdigest()
         pages = render_source(raw_content, candidate.mime_type)
+        if any(len(page.content) > MAX_ANNOTATION_PAGE_BYTES for page in pages):
+            raise SourceRejected(
+                "rendered_page_too_large",
+                "a rendered page exceeds the private workbench object limit",
+            )
         summary.pages_rendered += len(pages)
 
         for page in pages:
@@ -135,7 +141,7 @@ class IngestionService:
                     "render_profile": page.render_profile,
                     "dcal_ingestion_key": ingestion_key,
                 }
-                task_id = self.annotation_gateway.create_task(task_data)
+                task_id = self.annotation_gateway.create_task(task_data, page)
                 task_index[ingestion_key] = task_id
                 summary.tasks_created += 1
             else:

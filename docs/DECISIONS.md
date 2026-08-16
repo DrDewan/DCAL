@@ -42,7 +42,7 @@ Every source page is identified by byte-level SHA-256 plus an opaque object ID. 
 
 The permanent dataset format is `dcal.gold.v1`. Label Studio JSON is validated and normalized deterministically; it is not used directly for training.
 
-The same rule applies to the first-party workbench: operational SQLite rows are mutable working state, while only a validated, frozen `dcal.gold.v1` release is training input.
+The same rule applies to the first-party workbench: operational SQLite or Supabase rows are mutable working state, while only a validated, frozen `dcal.gold.v1` release is training input.
 
 ## D-008 — No single “98% OCR” metric
 
@@ -68,7 +68,7 @@ The inbox hierarchy is patient folder, then encounter folder, then source files.
 
 **Status:** Accepted, 14 August 2026
 
-The workbench and optional Label Studio adapter read checksum-addressed local files from a named volume. The volume is not canonical storage and can be reconstructed from the locked Drive page store. This avoids public Drive links and avoids giving annotator browsers Google credentials.
+The local workbench and optional Label Studio adapter read checksum-addressed local files from a named volume. The deployed workbench reads a private checksum-addressed working copy from Supabase Storage through authenticated server routes. Neither working copy is canonical storage; Google Drive remains the source and rendered-page archive. Annotator browsers never receive Google credentials.
 
 ## D-012 — A first-party workbench is the primary annotation interface
 
@@ -76,6 +76,18 @@ The workbench and optional Label Studio adapter read checksum-addressed local fi
 
 DCAL owns a focused browser workbench for page queueing, document identification, content-profile classification, region boxes, exact transcription, completion, and revision history. The workbench writes repository-owned `dcal.annotation.v2` state and exports only provenance-complete, completed pages to `dcal.gold.v1`.
 
-Browser upload is a convenience for synthetic tests and pilot annotation. It lacks patient/encounter grouping and is therefore visibly marked ineligible for dataset release. Dedicated Google Drive ingestion upgrades the same checksum-addressed page to dataset-eligible when complete opaque provenance arrives.
+Browser upload is a convenience for synthetic tests and pilot annotation. It lacks patient/encounter grouping and is therefore visibly marked ineligible for dataset release. Dedicated Google Drive ingestion upgrades an exact canonical-page or raw-image match to dataset-eligible when complete opaque provenance arrives.
 
-The private pilot binds to loopback by default. Internet or multi-user institutional deployment is blocked until an identity-aware reverse proxy, HTTPS, access logging, backups, session protection, and an institutional data-governance decision are in place.
+The local compatibility pilot binds to loopback by default. D-013 defines the authenticated hosted pilot. Institutional data-governance approval, tested backups, access review, and incident procedures remain deployment gates before real clinical material is admitted.
+
+## D-013 — The hosted pilot uses Vercel plus a separate Supabase project
+
+**Status:** Accepted, 16 August 2026
+
+The hosted annotation workbench is a Next.js application deployed independently on Vercel. A DCAL-only Supabase project provides named email/password authentication, mutable PostgreSQL task/revision state, and a private working-copy page bucket. The dedicated Google Drive remains the canonical intake, original archive, and rendered-page archive.
+
+The browser receives only a Supabase publishable key and session cookies. It has no direct task, revision, page-object, Google Drive, or secret-key access. Authenticated Vercel route handlers revalidate the user, read role and activation state from `public.profiles`, and use a server-only Supabase secret key. Direct Data API policies deny browser roles access to tasks and revisions. Gold export is limited to reviewer and admin roles.
+
+New Auth users are inactive annotators until an administrator explicitly activates them. Public signup is disabled. The Drive worker authenticates separately with a high-entropy ingestion bearer token, receives short-lived signed upload URLs for rendered PNGs, and never receives the Supabase secret key.
+
+Browser upload remains pilot-only, accepts one JPEG/PNG/WebP image per request, and cannot create dataset grouping. PDF and canonical dataset ingestion run on the separate long-lived Drive worker, not inside Vercel functions. Supabase free-tier capacity is suitable only for a small pilot; storage usage must be monitored and upgraded before it becomes a dataset bottleneck.

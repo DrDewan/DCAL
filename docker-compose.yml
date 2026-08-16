@@ -79,16 +79,13 @@ services:
       dockerfile: Dockerfile
     image: dcal-ingestion:local
     restart: unless-stopped
-    depends_on:
-      workbench:
-        condition: service_healthy
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google-drive-credentials.json
       GOOGLE_DELEGATED_SUBJECT: ${GOOGLE_DELEGATED_SUBJECT:-}
       DCAL_DRIVE_ROOT_FOLDER_ID: ${DCAL_DRIVE_ROOT_FOLDER_ID:-}
       DCAL_GROUP_HMAC_KEY: ${DCAL_GROUP_HMAC_KEY:-}
       DCAL_ANNOTATION_BACKEND: workbench
-      DCAL_WORKBENCH_URL: http://workbench:8090
+      DCAL_WORKBENCH_URL: ${DCAL_WORKBENCH_URL:-http://workbench:8090}
       DCAL_WORKBENCH_INGEST_TOKEN: ${DCAL_WORKBENCH_INGEST_TOKEN:?Set DCAL_WORKBENCH_INGEST_TOKEN in .env}
       DCAL_PAGE_CACHE_ROOT: /app/data/images
       DCAL_INGESTION_LEDGER: /app/data/state/ingestion.sqlite3

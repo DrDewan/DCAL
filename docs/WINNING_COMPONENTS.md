@@ -72,7 +72,7 @@ These are architectural components already established before M3 challenger work
 - **Component:** Use the first-party workbench for human annotation, then validate and normalize completed, provenance-eligible state into repository-owned `dcal.gold.v1` records. Retain Label Studio only as a compatibility adapter.
 - **Evidence:** Protects DCAL from mutable UI/database state and export-shape drift, blocks provenance-incomplete browser uploads from gold export, and makes downstream challenger scoring stable.
 - **Failure modes:** Requires adapter maintenance when annotation UI evolves.
-- **How to reuse:** Challengers consume frozen normalized dataset releases, not workbench SQLite rows or raw Label Studio exports.
+- **How to reuse:** Challengers consume frozen normalized dataset releases, not mutable workbench Supabase/SQLite rows or raw Label Studio exports.
 - **Follow-up:** M2 should add release registry and adjudication workflow.
 
 ## WC-0003 — Opaque grouped identity and immutable source checksums

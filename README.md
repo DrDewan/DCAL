@@ -6,13 +6,14 @@ It is intentionally independent of DCRP. DCAL owns annotation, gold-dataset crea
 
 ## Implemented foundation
 
-- A first-party, browser-based annotation workbench with upload, queue, progress, document identification, image-quality flags, drawable/resizable boxes, exact transcription, keyboard shortcuts, autosave, optimistic locking, and revision history.
+- A first-party, browser-based annotation workbench with named Supabase authentication, role-gated export, private page delivery, upload, queue, progress, document identification, image-quality flags, drawable/resizable boxes, exact transcription, keyboard shortcuts, autosave, optimistic locking, and revision history.
 - A versioned, repository-owned physical-document taxonomy.
 - Deterministic export of completed, provenance-complete workbench pages to `dcal.gold.v1` JSONL.
 - Dedicated Google Drive ingestion with PDF/image rendering, SHA-256 deduplication, opaque grouping IDs, quarantine, read-only archive locks, and idempotent workbench task creation.
 - A persistent ingestion ledger, full Drive checksum audit, and complete reconstruction of the derived workbench page cache.
 - Optional legacy Label Studio configuration and export adapter for compatibility; Label Studio is no longer the primary interface.
 - Synthetic fixtures and CI checks. No patient pages or identifiable data belong in Git.
+- A Vercel/Supabase hosted pilot in `web/`, with timestamped database migrations and a separate signed-upload contract for the Google Drive worker.
 
 Not implemented yet: dataset release/split registry, RunPod model workers, active-learning selection, experiment tracking, model promotion, or DCRP integration.
 
@@ -22,7 +23,13 @@ DCAL will use a champion-versus-challenger workflow for OCR, VLM, classification
 
 Read [Challenger Playbook](docs/CHALLENGER_PLAYBOOK.md) before building experiment runners, provider adapters, scoring, or promotion logic. Read [Winning Components](docs/WINNING_COMPONENTS.md) before proposing a challenger; it is the shared knowledge base where reusable wins from all challengers are recorded.
 
-## Local start
+## Hosted deployment
+
+The hosted pilot uses Vercel for the Next.js workbench and a DCAL-only Supabase project for named authentication, PostgreSQL task/revision state, and a private working-copy page bucket. The separate Google Drive remains the canonical intake and archive; one long-lived Docker worker connects it to the hosted workbench.
+
+Follow [Hosted Deployment Runbook](docs/DEPLOYMENT_RUNBOOK.md) in order. The remaining account-owner actions are: add the server-only Supabase secret to Vercel, disable public signup, create and activate the first administrator, import the repo into Vercel with root `web`, create the separate Drive/credential, and start one ingestion worker. Do not put clinical material into the system until the runbook's security and restore gate is approved.
+
+## Local compatibility start
 
 Prerequisites: Docker with Docker Compose and Python 3.11 or newer.
 
@@ -34,7 +41,7 @@ docker compose up -d
 
 Open `http://localhost:8090`. Set your annotator display name, upload synthetic/pilot images or let the Google Drive worker populate the queue, then open a page.
 
-The workbench intentionally binds to `127.0.0.1` by default and has no production identity provider yet. Do not expose it to the internet. Read [Workbench Runbook](docs/WORKBENCH_RUNBOOK.md) before handling real material.
+The local SQLite workbench intentionally binds to `127.0.0.1` and has no human identity provider. Do not expose it to the internet. The hosted `web/` application is the multi-user path. Read [Workbench Runbook](docs/WORKBENCH_RUNBOOK.md) before handling real material.
 
 The workflow is deliberately short:
 
@@ -139,6 +146,6 @@ Docker is not required for the Python and configuration tests. CI additionally v
 - `patient_group_id` and `encounter_group_id` are opaque keyed identifiers, not raw hospital IDs and not unsalted hashes.
 - Unknown or unreadable content must be labelled as such; it must never be guessed into a known class or transcription.
 - Test pages are separated by patient and writer and remain unavailable to model tuning.
-- The workbench SQLite database is operational state, not a frozen dataset release or model registry.
+- Workbench Supabase/SQLite state is operational state, not a frozen dataset release or model registry.
 
-Read [Workbench Runbook](docs/WORKBENCH_RUNBOOK.md), [Architecture](docs/ARCHITECTURE.md), [Google Drive Runbook](docs/GOOGLE_DRIVE_RUNBOOK.md), [Data Contract](docs/DATA_CONTRACT.md), [Annotation Guide](docs/ANNOTATION_GUIDE.md), [Challenger Playbook](docs/CHALLENGER_PLAYBOOK.md), [Winning Components](docs/WINNING_COMPONENTS.md), and [Roadmap](docs/ROADMAP.md) before extending the system.
+Read [Hosted Deployment Runbook](docs/DEPLOYMENT_RUNBOOK.md), [Workbench Runbook](docs/WORKBENCH_RUNBOOK.md), [Architecture](docs/ARCHITECTURE.md), [Google Drive Runbook](docs/GOOGLE_DRIVE_RUNBOOK.md), [Data Contract](docs/DATA_CONTRACT.md), [Annotation Guide](docs/ANNOTATION_GUIDE.md), [Challenger Playbook](docs/CHALLENGER_PLAYBOOK.md), [Winning Components](docs/WINNING_COMPONENTS.md), and [Roadmap](docs/ROADMAP.md) before extending the system.

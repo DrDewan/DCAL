@@ -12,7 +12,13 @@ The workbench is the primary DCAL interface for building the institution-specifi
 
 It is not an electronic medical record, DCRP component, model runner, or frozen dataset registry.
 
-## Private local start
+## Hosted pilot
+
+The production-shaped pilot lives in `web/` and is deployed with Vercel plus the DCAL-only Supabase project. It has named email/password accounts, inactive-by-default membership, annotator/reviewer/admin roles, private page storage, append-only revisions, optimistic locking, same-origin mutation checks, and server-mediated data access.
+
+Follow [Hosted Deployment Runbook](DEPLOYMENT_RUNBOOK.md) for the one-time Supabase, Vercel, first-admin, and Drive-worker steps. Do not upload clinical material merely because the login page is reachable; complete the security and recovery gate in that runbook first.
+
+## Private local compatibility start
 
 Create configuration and secrets:
 
@@ -30,7 +36,7 @@ docker compose up -d workbench
 docker compose ps
 ```
 
-Open `http://127.0.0.1:8090`. The default binding is loopback deliberately. Set an annotator display name in the top-right control; it is included in every revision and completed gold record.
+Open `http://127.0.0.1:8090`. The default binding is loopback deliberately. Set an annotator display name in the top-right control; it is included in every revision and completed gold record. This local SQLite implementation is retained for development and recovery compatibility; it is not the Vercel deployment.
 
 For development without Docker:
 
@@ -75,7 +81,9 @@ During template discovery, fixed boxes teach alignment anchors and establish can
 
 ## Upload behavior
 
-The upload panel accepts JPEG, PNG, TIFF, WebP, BMP, and PDF. The same production renderer normalizes pages to RGB PNG, limits source size/page count/pixel count, calculates SHA-256, and globally deduplicates identical rendered pages. Filenames are not stored or logged.
+The hosted browser panel accepts one JPEG, PNG, or WebP page per request. Large images are resized in the browser to fit Vercel request limits, then normalized to PNG on the server. It accepts at most ten selected images per batch and sends them sequentially. These are pilot-only pages.
+
+The local compatibility panel accepts JPEG, PNG, TIFF, WebP, BMP, and PDF. The Drive worker is the production path for every PDF and dataset-ready image. It normalizes sources to 300-DPI RGB PNG, limits source size/page count/pixel count, calculates SHA-256, and globally deduplicates identical rendered pages. Filenames are not stored or logged.
 
 Browser uploads are deliberately not allowed to invent patient or encounter groups. To build the real dataset, upload into the dedicated Drive hierarchy documented in `GOOGLE_DRIVE_RUNBOOK.md` and run the ingestion profile.
 
@@ -89,11 +97,11 @@ docker compose --profile ingestion run --rm dcal-ingest sync-once
 docker compose --profile ingestion up -d
 ```
 
-The worker authenticates to `POST /api/ingestion/tasks` with the private bearer token. A task key is derived from the rendered page checksum. Repeating ingestion returns the existing task. If a matching browser-uploaded page exists, Drive provenance upgrades that task to dataset-ready without replacing its annotation.
+The worker authenticates with the private bearer token, requests a two-hour signed upload destination from `POST /api/ingestion/upload-url`, uploads the canonical rendered PNG directly into the private bucket, and then calls `POST /api/ingestion/tasks`. A task key is derived from the rendered page checksum. Repeating ingestion returns the existing task. If an exact canonical-page or raw-image match from browser upload exists, Drive provenance upgrades that task to dataset-ready without replacing its annotation. A client-resized browser image may not match. The ingestion token is never a human login and the worker never receives the Supabase secret key.
 
 ## Export
 
-Select **Export gold** in the header or run:
+Reviewers and administrators can select **Export gold** in the hosted header. Annotators cannot export. For the local compatibility server, run:
 
 ```bash
 curl --fail http://127.0.0.1:8090/api/export/gold.jsonl \
@@ -106,26 +114,35 @@ Gold export is not yet a frozen dataset release. M2 will add release manifests, 
 
 ## Storage and recovery
 
-- `dcal_workbench_state` stores SQLite task and append-only revision state.
-- `dcal_page_cache` stores checksum-addressed rendered PNGs used by the browser. It is rebuildable from Drive.
+- The DCAL Supabase PostgreSQL database stores hosted task and append-only revision state; back it up separately from images.
+- The private Supabase `dcal-pages` bucket is the hosted browser working copy. It is not canonical storage and currently has no one-command full restore path.
+- `dcal_workbench_state` stores local-compatibility SQLite task and revision state.
+- `dcal_page_cache` stores local checksum-addressed rendered PNGs. It is rebuildable from Drive.
 - Google Drive stores the processed originals and canonical rendered pages.
 - The ingestion ledger remains in `dcal_ingestion_state`.
 
-Back up the workbench SQLite volume and the ingestion ledger. Stop the workbench or use SQLite's online backup API before copying its database files; do not copy only the main file while WAL writes are active. The page cache can be restored with `dcal-ingest restore-cache`.
+Back up Supabase state and the ingestion ledger, and export reviewed gold snapshots to approved encrypted storage. For the local server, stop the workbench or use SQLite's online backup API before copying its database files; do not copy only the main file while WAL writes are active. The local page cache can be restored with `dcal-ingest restore-cache`. A Supabase restore must be tested before the pilot grows beyond data that can be safely re-ingested.
 
 ## Security boundary
 
-The provided service is a private pilot baseline, not an internet-ready clinical application. It has no human login or authorization layer. Before binding beyond loopback or allowing multiple institutional annotators, all of these are mandatory:
+The hosted implementation supplies the application controls below:
 
-- HTTPS and an identity-aware reverse proxy with named accounts;
-- network restriction or VPN;
-- role-based queue and export authorization;
-- CSRF protection appropriate to the deployed authentication model;
-- access logs that omit document content and identifiers;
-- encrypted, tested database backups and restore drills;
-- secret management instead of `.env` on a shared host;
-- timeout/session-revocation policy;
-- institutional information-security and data-governance approval.
+- HTTPS through Vercel and named Supabase Auth accounts;
+- inactive-by-default profiles and role-gated export;
+- same-origin mutation checks and server-side session revalidation;
+- deny-all direct browser policies on tasks and revisions;
+- a private page bucket accessed through authenticated server routes;
+- separate human-session, Supabase-secret, Drive-credential, ingestion-token, and grouping-HMAC trust domains;
+- response headers that disable caching, framing, referrers, and broad browser capabilities.
+
+These operational gates are still mandatory before real clinical use:
+
+- disable public signup, create users administratively, and review active accounts;
+- store production secrets only in Vercel/worker secret stores and rotate them after suspected exposure;
+- confirm Vercel, Supabase, Google Workspace, region, retention, and contractual choices with institutional information security;
+- establish encrypted database backups, gold-export backups, restore drills, incident response, session revocation, and access-review cadence;
+- monitor Supabase database/storage capacity and upgrade before the free tier becomes a reliability risk;
+- optionally add an institutional network/VPN gate if policy requires it.
 
 Do not solve the missing login by sharing the ingestion token with annotators. That token authorizes system-to-system task creation only.
 
@@ -139,4 +156,3 @@ docker compose --profile ingestion run --rm dcal-ingest audit-drive
 ```
 
 During the first 50 pages of each physical type, record annotation time, unclear taxonomy choices, frequent box corrections, autosave conflicts, and completion errors. Do not widen the schema informally; adjudicate the pattern and version the contract when the change is real.
-
