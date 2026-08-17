@@ -21,7 +21,7 @@ Implemented:
 - Trackpad-friendly navigation: normal wheel/two-finger movement pans the page; pinch or `Ctrl/Cmd + wheel` zooms around the pointer; explicit Pan tool is available.
 - Multiline text transcription with preserved line breaks.
 - Versioned repository-owned physical-document taxonomy.
-- Deterministic export of completed, provenance-complete workbench pages to `dcal.gold.v1` JSONL.
+- Deterministic export of completed, provenance-complete workbench pages to `dcal.gold.v2` JSONL.
 - Dedicated Google Drive ingestion code with PDF/image rendering, SHA-256 deduplication, opaque patient/encounter grouping IDs, quarantine, archive restrictions, idempotent task creation, persistent ledger, audit, and cache recovery.
 - Vercel/Supabase hosted pilot under `web/` with timestamped database migrations and private signed-upload ingestion contract.
 - Optional legacy Label Studio configuration/export adapter for compatibility only.
@@ -171,7 +171,7 @@ docker compose --profile ingestion config
 docker compose --profile ingestion build dcal-ingest
 ```
 
-GitHub CI checks both annotation and Compose/ingestion contracts. For hosted changes, also verify Vercel preview, `/api/health`, and production readiness after merge.
+GitHub CI checks the annotation contract, the hosted workbench (tests, typecheck, browser-client syntax, and production build), and the Compose/ingestion contract. For hosted changes, also verify Vercel preview, `/api/health`, and production readiness after merge.
 
 ## Challenger system
 

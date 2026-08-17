@@ -40,7 +40,7 @@ class ExportValidationTests(unittest.TestCase):
         records = normalize_export(self.payload(), self.taxonomy)
         self.assertEqual(1, len(records))
         record = records[0]
-        self.assertEqual("dcal.gold.v1", record["schema_version"])
+        self.assertEqual("dcal.gold.v2", record["schema_version"])
         self.assertNotIn("image", record["source"])
         self.assertEqual(
             "dcal.render.300dpi-rgb-png.v1",

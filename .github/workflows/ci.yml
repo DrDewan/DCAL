@@ -37,6 +37,39 @@ jobs:
           python -m dcal_workbench --help
           node --check src/dcal_workbench/static/app.js
 
+  hosted-workbench:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install hosted workbench dependencies
+        run: npm ci
+      - name: Run hosted contract tests
+        run: npm test
+      - name: Typecheck hosted workbench
+        run: npm run typecheck
+      - name: Check browser client JavaScript
+        run: |
+          node --check public/app.js
+          node --check public/ux-v2.js
+      - name: Build hosted workbench
+        run: npm run build
+        env:
+          # Build-time placeholders only. Real values live in Vercel project
+          # settings and are never committed. These satisfy lib/env.ts shape
+          # validation during static analysis; no request is made to Supabase.
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_only_not_a_real_key
+          SUPABASE_SECRET_KEY: sb_secret_ci_only_not_a_real_key
+          DCAL_WORKBENCH_INGEST_TOKEN: ci-only-not-a-real-workbench-ingest-token
+
   compose-contract:
     runs-on: ubuntu-latest
     steps:

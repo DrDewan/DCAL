@@ -17,7 +17,7 @@ DCAL and DCRP have separate repositories, deployments, databases, credentials, a
 1. **Ingestion service** — a separate long-lived worker scans a dedicated Drive, validates patient/encounter/file hierarchy, renders pages, calculates checksums, generates opaque grouping IDs, archives originals/pages under content restrictions, uploads a private workbench copy, and creates idempotent tasks. It is not a Vercel function.
 2. **DCAL workbench** — a first-party Next.js human annotation interface on Vercel. A DCAL-only Supabase project provides named authentication, operational PostgreSQL state, append-only revisions, and a private working-copy page bucket. The original local SQLite interface remains a compatibility/development path.
 3. **Annotation contract** — repository-owned `dcal.annotation.v2` page/region state including physical classification, content profile, image quality, geometry, text, stable field codes, and optional structured tables.
-4. **Dataset adapter/export** — validates completed workbench state and converts provenance-complete pages into stable `dcal.gold.v1`. Prior Label Studio adapter remains compatibility-only.
+4. **Dataset adapter/export** — validates completed workbench state and converts provenance-complete pages into stable `dcal.gold.v2`. Prior Label Studio adapter remains compatibility-only.
 5. **Dataset registry** — freezes releases and patient/writer-separated train, validation, and sealed-test splits. Planned M2.
 6. **Experiment runner** — launches reproducible CPU/GPU challengers and records code, container, configuration, cost, latency, and metrics. Planned.
 7. **Model registry** — promotes a challenger only after regression gates pass. Planned.

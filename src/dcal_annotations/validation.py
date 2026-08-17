@@ -14,7 +14,7 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 FIELD_CODE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 INGESTION_KEY_RE = re.compile(r"^task_[0-9a-f]{32}$")
 ANNOTATION_SCHEMA_VERSION = "dcal.annotation.v1"
-GOLD_SCHEMA_VERSION = "dcal.gold.v1"
+GOLD_SCHEMA_VERSION = "dcal.gold.v2"
 INGESTION_SCHEMA_VERSION = "dcal.ingestion.v1"
 
 
@@ -253,6 +253,9 @@ def _normalize_region(
         "semantic_region_type": semantic_type,
         "field_code": field_code,
         "transcription": transcription,
+        # Label Studio never produced structured tables. The field is emitted so
+        # every dcal.gold.v2 region has the same shape regardless of source.
+        "table_data": None,
         "geometry": _validate_geometry(geometry_result),
     }
 

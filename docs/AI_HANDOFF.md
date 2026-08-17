@@ -398,7 +398,7 @@ Browser upload:
 - useful for UI testing and taxonomy refinement;
 - may contain normal annotations/revisions;
 - does not contain trusted patient/encounter grouping;
-- excluded from `dcal.gold.v1` export.
+- excluded from `dcal.gold.v2` export.
 
 ### Dataset-ready
 
@@ -486,9 +486,10 @@ docker compose --profile ingestion config
 docker compose --profile ingestion build dcal-ingest
 ```
 
-GitHub CI currently has two major jobs:
+GitHub CI currently has three major jobs:
 
 - `annotation-contract`
+- `hosted-workbench` — `npm ci`, `npm test`, `npm run typecheck`, `node --check` on both browser clients, and `npm run build` with placeholder environment values
 - `compose-contract`
 
 Do not merge through a failing contract check merely because Vercel builds.
