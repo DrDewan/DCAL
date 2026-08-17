@@ -1,0 +1,155 @@
+/* DCAL workbench UX v2: table-first transcription and trackpad-friendly navigation. */
+.annotation-layout {
+  grid-template-columns: 82px minmax(520px, 1fr) minmax(390px, 430px);
+}
+
+.tool-button.pan-tool { color: #3e6676; }
+.tool-button.pan-tool.active { border-color: #a9bdc5; background: #e9f0f3; color: #244d5d; }
+.tool-button.table-tool { color: #7657a5; }
+.tool-button.table-tool.active { border-color: #b9a8d5; background: #eee8f6; color: #624791; }
+
+#annotation-canvas.pan-mode { cursor: grab; }
+#annotation-canvas.pan-mode.panning { cursor: grabbing; }
+
+.inspector {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  background: #fff;
+}
+
+.inspector::-webkit-scrollbar,
+.table-grid-scroller::-webkit-scrollbar { width: 10px; height: 10px; }
+.inspector::-webkit-scrollbar-thumb,
+.table-grid-scroller::-webkit-scrollbar-thumb { background: #c3cfcc; border: 2px solid #fff; border-radius: 99px; }
+.inspector::-webkit-scrollbar-track,
+.table-grid-scroller::-webkit-scrollbar-track { background: #f4f6f5; }
+
+.priority-region {
+  background: #fff;
+  box-shadow: 0 4px 18px rgba(16, 42, 56, .055);
+}
+
+.compact-inspector-section { padding-top: 14px; padding-bottom: 14px; }
+.input-help { display: block; margin-top: -5px; color: #879794; font-size: 9px; font-weight: 500; line-height: 1.4; }
+#transcription { min-height: 116px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; tab-size: 2; }
+
+.table-editor {
+  margin: 0 0 14px;
+  padding: 13px;
+  border: 1px solid #d6d0e4;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #fbf9ff, #f7f8fb);
+}
+
+.table-editor-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+.table-editor-heading strong { display: block; font-size: 13px; }
+.table-editor-heading small { display: block; margin-top: 3px; color: #71817e; font-size: 9px; line-height: 1.35; }
+.table-badge { padding: 4px 7px; border-radius: 99px; color: #624791; background: #e8e0f4; font-size: 8px; font-weight: 850; letter-spacing: .1em; }
+
+.table-size-row {
+  display: grid;
+  grid-template-columns: 74px 82px minmax(105px, 1fr);
+  gap: 7px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+.table-size-row label { display: grid; gap: 4px; color: #647571; font-size: 9px; font-weight: 750; }
+.table-size-row input[type="number"] { width: 100%; height: 33px; padding: 0 8px; border: 1px solid #cbc5d7; border-radius: 7px; outline: none; background: #fff; }
+.table-size-row input[type="number"]:focus { border-color: #7b61b5; box-shadow: 0 0 0 3px rgba(123,97,181,.1); }
+.table-size-row .header-toggle { display: flex; height: 33px; align-items: center; gap: 7px; padding: 0 8px; border: 1px solid #d7d2df; border-radius: 7px; background: #fff; white-space: nowrap; }
+.table-size-row .header-toggle input { width: 14px; height: 14px; margin: 0; accent-color: #7657a5; }
+
+.table-action-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.table-action-row button { min-height: 29px; padding: 0 8px; border: 1px solid #d3cedd; border-radius: 7px; color: #5f5372; background: #fff; font-size: 9px; font-weight: 700; }
+.table-action-row button:hover { border-color: #a99abc; background: #f7f3fc; }
+
+.table-column-types {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 7px 32px;
+  min-width: max-content;
+}
+.table-column-kind { display: grid; gap: 3px; min-width: 90px; }
+.table-column-kind span { color: #84918e; font-size: 8px; font-weight: 720; }
+.table-column-kind select { width: 100%; height: 30px; padding: 0 22px 0 7px; border: 1px solid #d5cfdf; border-radius: 6px; color: #554869; background: #fff; font-size: 9px; font-weight: 650; }
+
+.table-grid-scroller {
+  max-height: min(46vh, 470px);
+  overflow: auto;
+  border: 1px solid #d9d5e1;
+  border-radius: 9px;
+  background: #fff;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+}
+.table-entry-grid { display: grid; min-width: max-content; align-items: stretch; }
+.table-grid-corner,
+.table-grid-column-number,
+.table-grid-row-number {
+  position: sticky;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  min-height: 28px;
+  color: #778782;
+  background: #f2f4f3;
+  border-right: 1px solid #e2e5e4;
+  border-bottom: 1px solid #e2e5e4;
+  font-size: 8px;
+  font-weight: 800;
+}
+.table-grid-corner { top: 0; left: 0; z-index: 5; }
+.table-grid-column-number { top: 0; }
+.table-grid-row-number { left: 0; }
+.table-cell-input {
+  width: 100%;
+  min-width: 108px;
+  min-height: 34px;
+  max-height: 160px;
+  margin: 0;
+  padding: 7px 8px;
+  resize: none;
+  overflow: hidden;
+  border: 0;
+  border-right: 1px solid #e4e6e5;
+  border-bottom: 1px solid #e4e6e5;
+  border-radius: 0;
+  outline: none;
+  color: #183341;
+  background: #fff;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.table-cell-input:focus { position: relative; z-index: 2; box-shadow: inset 0 0 0 2px #7b61b5; background: #fffefd; }
+.table-cell-input.header-cell { color: #425852; background: #f3f6f5; font-weight: 730; }
+.table-cell-input[data-content-type="printed_variable"] { background: #f6fcfd; }
+.table-cell-input[data-content-type="handwriting"] { background: #f6f8fd; }
+.table-key-help { margin: 8px 1px 0; color: #7b8986; font-size: 8px; line-height: 1.55; }
+.table-key-help kbd { vertical-align: middle; }
+
+.region-inspector.table-mode .two-fields,
+.region-inspector.table-mode .field-label:has(#region-label),
+.region-inspector.table-mode .field-label:has(#legibility),
+.region-inspector.table-mode .field-label:has(#structure-role),
+.region-inspector.table-mode .field-label:has(#transcription) { display: none; }
+.region-inspector.table-mode .field-label:has(#field-code) { margin-top: 2px; }
+.region-inspector.table-mode #region-heading::after { content: " · table"; color: #7657a5; font-family: Inter, sans-serif; font-size: 10px; font-weight: 700; }
+
+.keyboard-strip { overflow-x: auto; justify-content: flex-start; padding: 0 12px; white-space: nowrap; scrollbar-width: none; }
+.keyboard-strip::-webkit-scrollbar { display: none; }
+
+@media (max-width: 1220px) {
+  .annotation-layout { grid-template-columns: 74px minmax(470px, 1fr) minmax(350px, 390px); }
+}
+
+@media (max-width: 900px) {
+  .annotation-layout { grid-template-columns: 66px minmax(620px, 1fr) 360px; }
+  .table-grid-scroller { max-height: 420px; }
+}
