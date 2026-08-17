@@ -1,5 +1,7 @@
 # DCAL annotation workbench runbook
 
+Read `AI_HANDOFF.md` first for the current deployed state and code map.
+
 ## Scope
 
 The workbench is the primary DCAL interface for building the institution-specific page dataset. It intentionally does five things:
@@ -7,16 +9,155 @@ The workbench is the primary DCAL interface for building the institution-specifi
 1. receives rendered page images from the dedicated Google Drive pipeline or a pilot browser upload;
 2. queues pages and shows annotation progress;
 3. records physical document type, template variant, content profile, and image-quality defects;
-4. records typed bounding boxes, reading order, legibility, stable field codes, and exact text;
+4. records typed bounding boxes, reading order, legibility, stable field codes, exact text, and structured tables;
 5. validates completed pages and exports provenance-complete records to `dcal.gold.v1` JSONL.
 
 It is not an electronic medical record, DCRP component, model runner, or frozen dataset registry.
 
 ## Hosted pilot
 
-The production-shaped pilot lives in `web/` and is deployed with Vercel plus the DCAL-only Supabase project. It has named email/password accounts, inactive-by-default membership, annotator/reviewer/admin roles, private page storage, append-only revisions, optimistic locking, same-origin mutation checks, and server-mediated data access.
+The production-shaped pilot lives in `web/` and is deployed with Vercel plus the DCAL-only Supabase project.
 
-Follow [Hosted Deployment Runbook](DEPLOYMENT_RUNBOOK.md) for the one-time Supabase, Vercel, first-admin, and Drive-worker steps. Do not upload clinical material merely because the login page is reachable; complete the security and recovery gate in that runbook first.
+Current stable URL:
+
+`https://dcal-bm7i.vercel.app`
+
+The hosted workbench has named email/password accounts, inactive-by-default membership, annotator/reviewer/admin roles, private page storage, append-only revisions, optimistic locking, same-origin mutation checks, and server-mediated data access.
+
+Follow `DEPLOYMENT_RUNBOOK.md` for Supabase, Vercel, users, secrets, and Drive-worker operations. Do not equate a reachable login page or successful Vercel build with institutional approval for unrestricted clinical use.
+
+## Important browser-client architecture
+
+The current hosted workbench browser client is intentionally layered:
+
+- `web/public/app.js` — base client: queue, annotation state, canvas, drawing, move/resize, autosave, base keyboard handling.
+- `web/public/ux-v2.js` — enhancement layer: Table tool, Pan tool, spreadsheet table editor, trackpad panning, pointer-centred zoom, inspector ordering/scroll isolation, multiline improvements.
+- `web/public/ux-v2.css` — enhancement styling.
+- `web/app/page.tsx` — loads base workbench first, then UX v2.
+
+Do not casually remove, merge, or reorder this layer. Consolidation should be a dedicated refactor with behavior tests.
+
+## Annotation screen
+
+The queue distinguishes two provenance states:
+
+- **Dataset-ready** — the Drive ingester supplied content hashes plus opaque patient and encounter grouping. A completed task may be exported.
+- **Pilot upload** — the page came through the browser and has no trustworthy grouping. It can test the UI and refine taxonomy but gold export skips it.
+
+The annotation workspace contains:
+
+- **Page identity:** physical document type, confirmed template variant, and content profile.
+- **Quality flags:** clear or one/more material image defects. Clear cannot be combined with a defect.
+- **Region tools:** Fixed, Variable, Writing, Choice, Table, Other, plus Select and Pan.
+- **Canvas navigation:** two-finger/normal wheel pan, pinch or `Ctrl/Cmd + wheel` zoom around the pointer, explicit Pan (`P`) drag, existing Space-drag/middle-button pan, Fit, region selection, movement, and four-corner resize.
+- **Region inspector:** selected-region details appear first; type, reading order, legibility, structure, stable field code, exact transcription, or table editor.
+- **Multiline transcription:** normal text preserves visible line breaks. The text area auto-grows within a bounded height.
+- **Independent inspector scrolling:** the right sidebar scrolls separately and isolates wheel events from the canvas.
+- **Autosave:** saves after a short pause. `Ctrl/Cmd+S` saves immediately. A stale concurrent edit is rejected rather than overwriting another annotator.
+- **Completion:** validates page identity, geometry, unique reading order, label/legibility compatibility, required readable transcription, and structured-table requirements.
+
+## Tool shortcuts
+
+Current important shortcuts:
+
+| Key | Tool/action |
+|---|---|
+| `V` | Select |
+| `F` | Fixed printed text |
+| `D` | Variable printed text |
+| `H` | Handwriting |
+| `C` | Choice / checkbox |
+| `G` | Other meaningful region |
+| `T` | Table |
+| `P` | Pan |
+| Space + drag | Pan |
+| Delete / Backspace | Delete selected region |
+| `Ctrl/Cmd+S` | Save now |
+
+## Printed-page protocol
+
+Use content profiles consistently:
+
+| Content profile | Meaning | What to box |
+|---|---|---|
+| Blank printed form | Reusable form with no filled values | Representative fixed labels and all variable field locations |
+| Printed form with typed values | Form populated by machine-printed values | Fixed template anchors plus typed variable values; use Table when a relational grid is the natural unit |
+| Fully printed document | Printed content that is not a fillable form | Meaningful text blocks in reading order; use Table for structured reports |
+| Printed form with handwriting | Printed template plus handwritten entries | Template anchors, field locations, handwritten lines/values, structured table when appropriate |
+| Primarily handwritten page | No reliable printed template dominates | Handwriting lines or meaningful blocks |
+| Not sure | Page profile cannot be defended | Annotate only defensible regions and explain in notes |
+
+During template discovery, fixed boxes teach alignment anchors and establish canonical boilerplate. Once a template variant is registered, unchanged fixed boilerplate should come from the template registry; do not spend recurring annotation effort on it unless it drifted.
+
+## Investigation tables and charts
+
+For investigation reports such as haematology/biochemistry tables, do not draw dozens of independent cell rectangles unless there is a specific research reason.
+
+Preferred workflow:
+
+1. choose **Table** or press `T`;
+2. draw one parent rectangle around the complete visible table;
+3. set the row and column count;
+4. specify whether a header row exists;
+5. assign each non-header column a default content class: Fixed / Variable / Writing;
+6. transcribe values into the spreadsheet-like editor.
+
+Keyboard behavior inside the table editor:
+
+- `Tab` moves to the next cell;
+- `Enter` moves to the cell below;
+- `Shift+Enter` inserts a line break inside a cell;
+- pasting tab/newline-separated spreadsheet text fills a cell block and can expand the grid within contract limits.
+
+A typical CBC layout may use:
+
+- test name: Fixed;
+- result: Variable;
+- unit: Fixed;
+- reference range: Fixed.
+
+The parent region uses `label: "other_region"`, `structure_role: "table"`, and structured `table_data`. See `TABLE_ENTRY_V2.md` and `DATA_CONTRACT.md`.
+
+## Upload behavior
+
+The hosted browser panel accepts JPEG, PNG, or WebP pages. Large images are resized in the browser to fit hosted request limits, then normalized server-side. The UI can accept multiple selections and uploads them sequentially. These pages are pilot-only.
+
+The local compatibility panel accepts JPEG, PNG, TIFF, WebP, BMP, and PDF. The Drive worker is the production path for every PDF and dataset-ready image. It normalizes sources to 300-DPI RGB PNG, limits source size/page count/pixel count, calculates SHA-256, and globally deduplicates identical rendered pages. Filenames are not stored or logged.
+
+Browser uploads are deliberately not allowed to invent patient or encounter groups. To build the real dataset, upload into the dedicated Drive hierarchy in `GOOGLE_DRIVE_RUNBOOK.md` and run the ingestion profile.
+
+## Drive ingestion
+
+The implementation exists, but verify whether the production long-lived worker is currently running before assuming dataset-ready ingestion is live.
+
+For local/worker operation:
+
+```bash
+docker compose --profile ingestion run --rm dcal-ingest doctor
+docker compose --profile ingestion run --rm dcal-ingest sync-once
+docker compose --profile ingestion up -d
+```
+
+The worker authenticates with the private bearer token, requests a short-lived signed upload destination from `POST /api/ingestion/upload-url`, uploads the canonical rendered PNG into the private bucket, then calls `POST /api/ingestion/tasks`.
+
+A task key is derived from the rendered page checksum. Repeated ingestion returns the existing task. If an exact canonical-page or raw-image browser-upload match exists, Drive provenance upgrades that task to dataset-ready without discarding its annotation. A client-resized browser image may not match.
+
+The ingestion token is never a human login and the worker never receives the Supabase secret key.
+
+## Export
+
+Reviewers and administrators can use **Export gold** in the hosted header. Annotators cannot export.
+
+For the local compatibility server:
+
+```bash
+curl --fail http://127.0.0.1:8090/api/export/gold.jsonl \
+  --output /secure/path/dcal-gold.jsonl
+```
+
+Export includes only completed, Drive-provenance tasks. The file contains clinical text and must remain in approved encrypted storage; never commit it to Git or attach it to ordinary tickets/chats.
+
+Gold export is not yet a frozen dataset release. M2 will add release manifests, patient/writer-separated splits, adjudication, and immutable snapshots.
 
 ## Private local compatibility start
 
@@ -27,16 +168,16 @@ cp .env.example .env
 openssl rand -hex 32
 ```
 
-Put the generated value in both uses of `DCAL_WORKBENCH_INGEST_TOKEN` through `.env`. The token authenticates the ingestion worker, not human browser sessions.
+Put the generated workbench token in `.env`. It authenticates ingestion, not human browser sessions.
 
-Start the workbench:
+Start:
 
 ```bash
 docker compose up -d workbench
 docker compose ps
 ```
 
-Open `http://127.0.0.1:8090`. The default binding is loopback deliberately. Set an annotator display name in the top-right control; it is included in every revision and completed gold record. This local SQLite implementation is retained for development and recovery compatibility; it is not the Vercel deployment.
+Open `http://127.0.0.1:8090`.
 
 For development without Docker:
 
@@ -47,112 +188,66 @@ python -m dcal_workbench \
   --cache-root data/images
 ```
 
-## Annotation screen
-
-The queue distinguishes two provenance states:
-
-- **Dataset-ready** — the Drive ingester supplied content hashes plus opaque patient and encounter grouping. A completed task may be exported.
-- **Pilot upload** — the page came through the browser and has no trustworthy grouping. It can be used to test the UI and refine the taxonomy, but gold export skips it.
-
-The annotation workspace contains:
-
-- **Page identity:** physical document type, confirmed template variant, and content profile.
-- **Quality flags:** clear or one/more material image defects. Clear cannot be combined with a defect.
-- **Region tools:** fixed printed text, variable printed text, handwriting, choice/checkbox, and grid/other.
-- **Canvas:** wheel zoom, Fit, Space-drag pan, box selection, box movement, and four-corner resize.
-- **Region inspector:** type, reading order, legibility, structure, stable field code, and exact transcription.
-- **Autosave:** saves after a short pause. `Ctrl/Cmd+S` saves immediately. A stale concurrent edit is rejected instead of overwriting another annotator.
-- **Completion:** validates required page identity, region geometry, unique reading order, label/legibility compatibility, and required readable transcription.
-
-## Printed-page protocol
-
-Use these content profiles consistently:
-
-| Content profile | Meaning | What to box |
-|---|---|---|
-| Blank printed form | Reusable form with no filled values | Representative fixed labels and all variable field locations |
-| Printed form with typed values | Form populated by machine-printed values | Fixed template anchors plus each typed variable value |
-| Fully printed document | Printed content that is not a fillable form | Meaningful text blocks in reading order |
-| Printed form with handwriting | Printed template plus handwritten entries | Template anchors, field locations, and each handwritten line/value |
-| Primarily handwritten page | No reliable printed template dominates | Handwriting lines or meaningful blocks |
-| Not sure | Page profile cannot be defended | Annotate only defensible regions and explain in notes |
-
-During template discovery, fixed boxes teach alignment anchors and establish canonical boilerplate. Once a template variant is registered, unchanged fixed boilerplate should come from the template registry; do not spend recurring annotation effort on it unless it drifted.
-
-## Upload behavior
-
-The hosted browser panel accepts one JPEG, PNG, or WebP page per request. Large images are resized in the browser to fit Vercel request limits, then normalized to PNG on the server. It accepts at most ten selected images per batch and sends them sequentially. These are pilot-only pages.
-
-The local compatibility panel accepts JPEG, PNG, TIFF, WebP, BMP, and PDF. The Drive worker is the production path for every PDF and dataset-ready image. It normalizes sources to 300-DPI RGB PNG, limits source size/page count/pixel count, calculates SHA-256, and globally deduplicates identical rendered pages. Filenames are not stored or logged.
-
-Browser uploads are deliberately not allowed to invent patient or encounter groups. To build the real dataset, upload into the dedicated Drive hierarchy documented in `GOOGLE_DRIVE_RUNBOOK.md` and run the ingestion profile.
-
-## Drive ingestion
-
-Start the workbench before the worker. Compose handles this through a health check:
-
-```bash
-docker compose --profile ingestion run --rm dcal-ingest doctor
-docker compose --profile ingestion run --rm dcal-ingest sync-once
-docker compose --profile ingestion up -d
-```
-
-The worker authenticates with the private bearer token, requests a two-hour signed upload destination from `POST /api/ingestion/upload-url`, uploads the canonical rendered PNG directly into the private bucket, and then calls `POST /api/ingestion/tasks`. A task key is derived from the rendered page checksum. Repeating ingestion returns the existing task. If an exact canonical-page or raw-image match from browser upload exists, Drive provenance upgrades that task to dataset-ready without replacing its annotation. A client-resized browser image may not match. The ingestion token is never a human login and the worker never receives the Supabase secret key.
-
-## Export
-
-Reviewers and administrators can select **Export gold** in the hosted header. Annotators cannot export. For the local compatibility server, run:
-
-```bash
-curl --fail http://127.0.0.1:8090/api/export/gold.jsonl \
-  --output /secure/path/dcal-gold.jsonl
-```
-
-The response headers report exported and skipped-manual counts. Export includes only completed, Drive-provenance tasks. The file still contains clinical text and must remain in approved encrypted storage; never commit it to Git or attach it to a ticket/chat.
-
-Gold export is not yet a frozen dataset release. M2 will add release manifests, patient/writer-separated splits, adjudication, and signed immutable snapshots.
+The local SQLite implementation is retained for compatibility and recovery. It does not automatically include every hosted `web/` UX refinement.
 
 ## Storage and recovery
 
-- The DCAL Supabase PostgreSQL database stores hosted task and append-only revision state; back it up separately from images.
-- The private Supabase `dcal-pages` bucket is the hosted browser working copy. It is not canonical storage and currently has no one-command full restore path.
-- `dcal_workbench_state` stores local-compatibility SQLite task and revision state.
-- `dcal_page_cache` stores local checksum-addressed rendered PNGs. It is rebuildable from Drive.
-- Google Drive stores the processed originals and canonical rendered pages.
-- The ingestion ledger remains in `dcal_ingestion_state`.
+- Supabase PostgreSQL stores hosted task and append-only revision state; back it up separately from images.
+- Private Supabase `dcal-pages` stores hosted working-copy page bytes; it is not canonical storage.
+- Local `dcal_workbench_state` stores compatibility SQLite state.
+- Local `dcal_page_cache` stores rebuildable checksum-addressed rendered PNGs.
+- Google Drive stores processed originals and canonical rendered pages.
+- `dcal_ingestion_state` stores the ingestion ledger.
 
-Back up Supabase state and the ingestion ledger, and export reviewed gold snapshots to approved encrypted storage. For the local server, stop the workbench or use SQLite's online backup API before copying its database files; do not copy only the main file while WAL writes are active. The local page cache can be restored with `dcal-ingest restore-cache`. A Supabase restore must be tested before the pilot grows beyond data that can be safely re-ingested.
+Back up Supabase state and ingestion ledger, and export reviewed gold snapshots to approved encrypted storage. Test restore procedures before scaling the pilot.
 
 ## Security boundary
 
-The hosted implementation supplies the application controls below:
+The hosted implementation supplies:
 
 - HTTPS through Vercel and named Supabase Auth accounts;
 - inactive-by-default profiles and role-gated export;
 - same-origin mutation checks and server-side session revalidation;
 - deny-all direct browser policies on tasks and revisions;
-- a private page bucket accessed through authenticated server routes;
+- private page bucket access through authenticated server routes;
 - separate human-session, Supabase-secret, Drive-credential, ingestion-token, and grouping-HMAC trust domains;
 - response headers that disable caching, framing, referrers, and broad browser capabilities.
 
-These operational gates are still mandatory before real clinical use:
+Operational gates remain mandatory:
 
-- disable public signup, create users administratively, and review active accounts;
-- store production secrets only in Vercel/worker secret stores and rotate them after suspected exposure;
-- confirm Vercel, Supabase, Google Workspace, region, retention, and contractual choices with institutional information security;
-- establish encrypted database backups, gold-export backups, restore drills, incident response, session revocation, and access-review cadence;
-- monitor Supabase database/storage capacity and upgrade before the free tier becomes a reliability risk;
-- optionally add an institutional network/VPN gate if policy requires it.
+- public signup disabled;
+- users created/activated administratively;
+- production secrets only in approved secret stores;
+- encrypted database and export backups;
+- restore drills;
+- incident response/session revocation;
+- access-review cadence;
+- storage/capacity monitoring;
+- institutional review of hosting region, retention, and contractual requirements.
 
-Do not solve the missing login by sharing the ingestion token with annotators. That token authorizes system-to-system task creation only.
+Do not solve a missing login by sharing the ingestion token with annotators.
 
-## Operational checks
+## Verification
 
-Before a pilot session:
+Before declaring a hosted change complete:
 
 ```bash
-curl --fail http://127.0.0.1:8090/api/health
-docker compose --profile ingestion run --rm dcal-ingest audit-drive
+python -m unittest discover -s tests -v
+cd web
+npm ci
+npm test
+npm run typecheck
+npm run build
 ```
 
-During the first 50 pages of each physical type, record annotation time, unclear taxonomy choices, frequent box corrections, autosave conflicts, and completion errors. Do not widen the schema informally; adjudicate the pattern and version the contract when the change is real.
+When relevant and Docker is available:
+
+```bash
+docker compose config
+docker compose --profile ingestion config
+docker compose --profile ingestion build dcal-ingest
+```
+
+Then verify GitHub CI, Vercel preview readiness, `/api/health`, and the production deployment after merge.
+
+During pilot sessions, record annotation time, unclear taxonomy choices, frequent geometry corrections, table-entry friction, navigation friction, autosave conflicts, and completion errors. Do not widen the schema informally; adjudicate repeated patterns and version the contract when the change is real.
