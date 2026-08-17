@@ -16,7 +16,7 @@ export default async function WorkbenchPage() {
       <link rel="stylesheet" href="/ux-v2.css" />
       <div dangerouslySetInnerHTML={{ __html: workbenchMarkup(canExport) }} />
       <Script src="/app.js" strategy="afterInteractive" />
-      <Script src="/ux-v2.js" strategy="afterInteractive" />
+      <Script src="/ux-v2.js" strategy="lazyOnload" />
     </>
   );
 }
