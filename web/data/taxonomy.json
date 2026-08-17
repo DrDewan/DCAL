@@ -1,6 +1,6 @@
 {
   "schema_version": "dcal.taxonomy.v1",
-  "updated": "2026-08-13",
+  "updated": "2026-08-17",
   "institution": "Bangladesh Medical College Hospital",
   "provenance": "Independent DCAL snapshot of the evidence-backed BMCH physical source vocabulary. This file has no runtime dependency on DCRP.",
   "physical_document_types": [
@@ -48,6 +48,7 @@
     {"code": "none", "name": "No additional structure"},
     {"code": "form_field", "name": "Form field"},
     {"code": "free_text_block", "name": "Free-text block"},
+    {"code": "table", "name": "Table / grid"},
     {"code": "table_header", "name": "Table header"},
     {"code": "table_cell", "name": "Table cell"},
     {"code": "chart_axis_or_label", "name": "Chart axis or label"}
