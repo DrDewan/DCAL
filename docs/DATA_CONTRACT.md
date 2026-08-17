@@ -16,7 +16,7 @@ Every workbench task admitted to a gold dataset must originate from an ingestion
     "patient_group_id": "keyed opaque grouping ID",
     "encounter_group_id": "keyed opaque grouping ID",
     "source_page_index": 1,
-    "annotation_schema_version": "dcal.annotation.v2",
+    "annotation_schema_version": "dcal.annotation.v1",
     "ingestion_schema_version": "dcal.ingestion.v1",
     "render_profile": "dcal.render.300dpi-rgb-png.v1",
     "dcal_ingestion_key": "task_<32 lowercase hex characters>",
@@ -26,6 +26,8 @@ Every workbench task admitted to a gold dataset must originate from an ingestion
   }
 }
 ```
+
+The current ingestion contract deliberately still requires `annotation_schema_version: "dcal.annotation.v1"`. This is an **ingestion compatibility marker**, not the schema version of the mutable hosted annotation JSON. After task creation, the first-party workbench stores and validates `dcal.annotation.v2` state. Do not change the ingestion marker to v2 only to make the names look aligned; that would be a separate contract migration affecting `src/dcal_ingestion/service.py`, `web/lib/ingestion.ts`, tests, and compatibility consumers.
 
 `patient_group_id` and `encounter_group_id` must be generated with a keyed HMAC or secure random mapping. The Drive adapter HMACs stable patient-folder and encounter-folder IDs and never exports names or raw Drive IDs. A plain/unsalted hash of a hospital number is forbidden.
 
