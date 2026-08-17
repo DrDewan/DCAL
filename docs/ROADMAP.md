@@ -2,6 +2,8 @@
 
 The roadmap is milestone based. Only one implementation block is active at a time.
 
+For the current deployed implementation snapshot and exact continuation context, read `docs/AI_HANDOFF.md` before making changes.
+
 ## M0 — Annotation foundation
 
 **Status:** Superseded foundation retained for compatibility
@@ -12,34 +14,48 @@ The roadmap is milestone based. Only one implementation block is active at a tim
 - Deterministic `dcal.gold.v1` normalization.
 - Synthetic tests and CI.
 
-**Exit gate:** historical contract complete; the usability gate moves to M1 under the first-party workbench.
+**Exit gate:** historical contract complete; the usability gate moved to M1 under the first-party workbench.
 
 ## M1 — Secure ingestion and pilot
 
-**Status:** Active — hosted foundation complete; account setup, Drive connection, and pilot pending
+**Status:** Active — hosted Vercel/Supabase workbench is live; usability refinement and dataset-ready Drive pilot remain active
+
+Implemented:
 
 - First-party annotation workbench with page queue, progress, upload, document/content identification, typed boxes, transcription, autosave, optimistic locking, and revision history.
+- Named Supabase authentication with inactive-by-default membership and annotator/reviewer/admin roles.
+- Private page delivery and server-mediated task/revision access.
 - Dedicated Google Drive discovery and versioned folder bootstrap.
-- Checksum-addressed source/page archive with Drive content restrictions and audit.
+- Checksum-addressed source/page archive design with Drive content restrictions and audit.
 - Checksums, opaque patient/encounter grouping, and global page duplicate detection.
 - Idempotent task creation through the private workbench API.
 - Rebuildable local annotation cache and persistent operational ledger.
 - Deterministic gold export that excludes provenance-incomplete browser uploads.
-- Authenticated Vercel workbench with inactive-by-default named accounts, role-gated export, server-mediated data access, and private Supabase page storage.
 - DCAL-only Supabase schema, append-only revisions, optimistic-locking functions, RLS deny policies, and migration history.
-- Pilot of 50 pages per confirmed physical type.
-- Measured annotation time, disagreements, and taxonomy gaps.
+- Table-first structured annotation for investigation reports and charts using one parent region plus a spreadsheet-like `table_data` cell matrix.
+- Trackpad-friendly image navigation: wheel/trackpad pan, pointer-centred pinch/Ctrl/Cmd-wheel zoom, explicit Pan tool, and independent inspector scrolling.
+- Production Vercel deployment at `https://dcal-bm7i.vercel.app`.
 
-**Exit gate:** private deployment security is approved, no source/annotation identity gaps remain, and a human pilot confirms that box drawing, resizing, transcription, autosave, and completion are usable.
+Still required before M1 exit:
+
+- Continue human-centered usability refinement based on real annotation sessions.
+- Verify and operate the production long-lived Google Drive ingestion worker before assuming dataset-ready ingestion is live.
+- Complete the pilot of approximately 50 pages per confirmed physical type.
+- Measure annotation time, disagreement patterns, taxonomy gaps, frequent geometry corrections, save conflicts, and completion errors.
+- Complete/verify production backup, recovery, access-review, retention, and incident-response gates for real clinical material.
+- Resolve any annotation-contract gaps discovered during the pilot through explicit versioned changes rather than informal fields.
+
+**Exit gate:** private deployment security/recovery is approved, no source/annotation identity gaps remain, the Drive path is operational for dataset-ready pages, and a human pilot confirms that document identification, box/table annotation, transcription, navigation, autosave, and completion are practical at scale.
 
 ## M2 — Dataset registry and quality workflow
 
-**Status:** Pending
+**Status:** Pending; do not treat completed M1 rows as a frozen training release
 
 - Versioned dataset releases.
 - Patient- and writer-separated train/validation/sealed-test splits.
 - Reviewer/adjudication workflow in the first-party workbench.
 - Hidden gold tasks, annotator quality reports, and revision history.
+- Immutable release manifests and release-level provenance.
 
 ## M3 — Baseline classification and printed text
 
