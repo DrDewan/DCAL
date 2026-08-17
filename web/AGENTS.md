@@ -8,4 +8,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-All repository-wide rules in `../AGENTS.md` also apply. In particular, read the required DCAL architecture, data, deployment, Drive, workbench, and challenger documents before changing this application; never add patient data or secrets to Git.
+All repository-wide rules in `../AGENTS.md` apply.
+
+Before changing the hosted workbench, read `../docs/AI_HANDOFF.md` and `../docs/WORKBENCH_RUNBOOK.md`.
+
+Current hosted-client caution:
+
+- `public/app.js` is the base client.
+- `public/ux-v2.js` and `public/ux-v2.css` add table-first entry and improved navigation.
+- `app/page.tsx` loads the base script before UX v2.
+- Do not casually remove/reorder that enhancement layer.
+- `lib/validation.ts` owns server-side table-data validation.
+- Taxonomy edits must remain synchronized with `../config/taxonomy/bmch-document-taxonomy.v1.json` and Label Studio compatibility aliases.
+
+Never add patient data, real transcripts, storage identifiers, signed URLs, or secrets to Git or tests.
