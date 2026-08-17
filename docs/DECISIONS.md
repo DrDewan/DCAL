@@ -90,4 +90,30 @@ The browser receives only a Supabase publishable key and session cookies. It has
 
 New Auth users are inactive annotators until an administrator explicitly activates them. Public signup is disabled. The Drive worker authenticates separately with a high-entropy ingestion bearer token, receives short-lived signed upload URLs for rendered PNGs, and never receives the Supabase secret key.
 
-Browser upload remains pilot-only, accepts one JPEG/PNG/WebP image per request, and cannot create dataset grouping. PDF and canonical dataset ingestion run on the separate long-lived Drive worker, not inside Vercel functions. Supabase free-tier capacity is suitable only for a small pilot; storage usage must be monitored and upgraded before it becomes a dataset bottleneck.
+Browser upload remains pilot-only, accepts JPEG/PNG/WebP images, and cannot create dataset grouping. PDF and canonical dataset ingestion run on the separate long-lived Drive worker, not inside Vercel functions. Supabase free-tier capacity is suitable only for a small pilot; storage usage must be monitored and upgraded before it becomes a dataset bottleneck.
+
+## D-014 — Relational tables are annotated as one parent region plus structured cells
+
+**Status:** Accepted, 17 August 2026
+
+Investigation reports and hospital charts frequently contain relational tables. DCAL will not require a human annotator to draw and transcribe every visible cell as an independent rectangle when the relational grid is the meaningful unit.
+
+A table is represented by one page-coordinate parent region with `structure_role: "table"` and an additive structured `table_data` payload containing row count, column count, header-row count, default textual content class per column, and a rectangular cell string matrix.
+
+This preserves both geometry and row/column relationships while keeping the initial human workflow fast enough for dataset production. The parent region remains an ordinary `dcal.annotation.v2` region; the additive table payload does not require a Supabase schema migration and does not invalidate existing non-table annotations.
+
+Current table limits are deliberately bounded: at most 100 rows, 12 columns, 10,000 characters per cell, and 100,000 table characters total. Completed tables require at least one non-empty cell.
+
+The hosted workbench exposes Fixed, Variable, and Writing as default non-header column classes. Header rows are currently treated as fixed printed content.
+
+Do not flatten a structured table into a single generic transcription string. Do not multiply table cells into independent rectangles solely to imitate OCR training data; downstream extraction representations can be derived later from the structured gold annotation.
+
+## D-015 — Human annotation ergonomics are a first-class M1 constraint
+
+**Status:** Accepted, 17 August 2026
+
+The purpose of M1 is to create reliable human-reviewed data at usable speed. Annotation ergonomics therefore affect dataset quality and throughput and are not cosmetic-only concerns.
+
+The hosted canvas uses ordinary wheel/two-finger gestures to pan the page, pinch or `Ctrl/Cmd + wheel` to zoom around the pointer, and an explicit Pan tool for drag movement. The selected-region editor scrolls independently from the canvas and multiline transcription preserves visible line breaks.
+
+The current implementation delivers these changes through a `ux-v2.js` enhancement layer loaded after the base `app.js`. This layering is an implementation compromise, not a permanent architectural requirement. A future consolidation must be a dedicated behavior-preserving refactor rather than an incidental cleanup bundled with new annotation features.
