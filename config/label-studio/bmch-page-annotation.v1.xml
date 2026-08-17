@@ -91,6 +91,7 @@
       <Choice value="No additional structure" alias="none"/>
       <Choice value="Form field" alias="form_field"/>
       <Choice value="Free-text block" alias="free_text_block"/>
+      <Choice value="Table / grid" alias="table"/>
       <Choice value="Table header" alias="table_header"/>
       <Choice value="Table cell" alias="table_cell"/>
       <Choice value="Chart axis or label" alias="chart_axis_or_label"/>
