@@ -7,6 +7,10 @@ import { HttpError } from "@/lib/http";
 
 const REGION_ID = /^reg_[a-f0-9]{12,32}$/;
 const FIELD_CODE = /^[a-z][a-z0-9_]*$/;
+const TABLE_MAX_ROWS = 100;
+const TABLE_MAX_COLUMNS = 12;
+const TABLE_MAX_CELL_LENGTH = 10_000;
+const TABLE_MAX_TEXT_LENGTH = 100_000;
 
 function invalid(message: string): never {
   throw new HttpError(400, "invalid_annotation", message);
@@ -16,6 +20,66 @@ function optionalString(value: unknown, label: string) {
   if (value === null || value === undefined || value === "") return null;
   if (typeof value !== "string") invalid(`${label} must be text.`);
   return value;
+}
+
+function normalizeTableData(value: unknown, regionNumber: number) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    invalid(`Region ${regionNumber} needs table data.`);
+  }
+  const input = value as Record<string, unknown>;
+  const rows = input.rows;
+  const columns = input.columns;
+  const headerRows = input.header_rows ?? 0;
+  if (!Number.isInteger(rows) || (rows as number) < 1 || (rows as number) > TABLE_MAX_ROWS) {
+    invalid(`Region ${regionNumber} table rows must be between 1 and ${TABLE_MAX_ROWS}.`);
+  }
+  if (!Number.isInteger(columns) || (columns as number) < 1 || (columns as number) > TABLE_MAX_COLUMNS) {
+    invalid(`Region ${regionNumber} table columns must be between 1 and ${TABLE_MAX_COLUMNS}.`);
+  }
+  if (!Number.isInteger(headerRows) || (headerRows as number) < 0 || (headerRows as number) > (rows as number)) {
+    invalid(`Region ${regionNumber} has invalid table header rows.`);
+  }
+
+  const columnLabels = input.column_labels;
+  if (!Array.isArray(columnLabels) || columnLabels.length !== columns) {
+    invalid(`Region ${regionNumber} table column types must match the column count.`);
+  }
+  const normalizedColumnLabels = columnLabels.map((label, offset) => {
+    const contract = typeof label === "string" ? taxonomySets.regionLabels.get(label) : undefined;
+    if (!contract || contract.textual !== true) {
+      invalid(`Region ${regionNumber} table column ${offset + 1} needs a textual content type.`);
+    }
+    return label as string;
+  });
+
+  const rawCells = input.cells;
+  if (!Array.isArray(rawCells) || rawCells.length !== rows) {
+    invalid(`Region ${regionNumber} table cells must match the row count.`);
+  }
+  let totalLength = 0;
+  const cells = rawCells.map((rawRow, rowIndex) => {
+    if (!Array.isArray(rawRow) || rawRow.length !== columns) {
+      invalid(`Region ${regionNumber} table row ${rowIndex + 1} must match the column count.`);
+    }
+    return rawRow.map((cell, columnIndex) => {
+      if (typeof cell !== "string" || cell.length > TABLE_MAX_CELL_LENGTH) {
+        invalid(`Region ${regionNumber} table cell ${rowIndex + 1},${columnIndex + 1} is invalid.`);
+      }
+      totalLength += cell.length;
+      if (totalLength > TABLE_MAX_TEXT_LENGTH) {
+        invalid(`Region ${regionNumber} table text is too large.`);
+      }
+      return cell;
+    });
+  });
+
+  return {
+    rows: rows as number,
+    columns: columns as number,
+    header_rows: headerRows as number,
+    column_labels: normalizedColumnLabels,
+    cells,
+  };
 }
 
 export type NormalizedAnnotation = ReturnType<typeof validateAnnotation>;
@@ -121,6 +185,17 @@ export function validateAnnotation(value: unknown, completing: boolean) {
     ) {
       invalid(`Region ${number} needs exact transcription.`);
     }
+
+    const tableData = structure === "table"
+      ? normalizeTableData(region.table_data, number)
+      : null;
+    if (structure !== "table" && region.table_data !== null && region.table_data !== undefined) {
+      invalid(`Region ${number} has table data but is not marked as a table.`);
+    }
+    if (completing && tableData && !tableData.cells.some((row) => row.some((cell) => cell.trim()))) {
+      invalid(`Region ${number} table needs at least one transcribed cell.`);
+    }
+
     return {
       id,
       label: label as string,
@@ -129,6 +204,7 @@ export function validateAnnotation(value: unknown, completing: boolean) {
       reading_order: readingOrder as number,
       field_code: fieldCode || null,
       transcription,
+      table_data: tableData,
       ...geometry,
     };
   });
