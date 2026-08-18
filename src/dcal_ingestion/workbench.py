@@ -72,7 +72,7 @@ class WorkbenchClient:
             headers={
                 "Content-Type": "image/png",
                 "Cache-Control": "max-age=0",
-                "X-Upsert": "false",
+                "X-Upsert": "true",
             },
             method="PUT",
         )

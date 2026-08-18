@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { appOrigins } from "@/lib/env";
+
 export class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -40,17 +42,28 @@ export function assertSameOrigin(request: NextRequest) {
   }
   const origin = request.headers.get("origin");
   if (!origin) throw new HttpError(403, "origin_required", "Request origin is required.");
-  const expected = new URL(request.url);
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const forwardedProto = request.headers.get("x-forwarded-proto");
-  if (forwardedHost) expected.host = forwardedHost;
-  if (forwardedProto) expected.protocol = `${forwardedProto}:`;
   let supplied: URL;
   try {
     supplied = new URL(origin);
   } catch {
     throw new HttpError(403, "invalid_origin", "Request origin is invalid.");
   }
+
+  // A configured allowlist is authoritative and ignores request headers
+  // entirely, so a spoofed x-forwarded-host cannot define its own expectation.
+  const configured = appOrigins();
+  if (configured.length) {
+    if (!configured.includes(supplied.origin)) {
+      throw new HttpError(403, "invalid_origin", "Cross-origin request rejected.");
+    }
+    return;
+  }
+
+  const expected = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (forwardedHost) expected.host = forwardedHost;
+  if (forwardedProto) expected.protocol = `${forwardedProto}:`;
   if (supplied.origin !== expected.origin) {
     throw new HttpError(403, "invalid_origin", "Cross-origin request rejected.");
   }

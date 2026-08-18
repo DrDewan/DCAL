@@ -155,3 +155,25 @@ It is retained rather than deleted because it renders PDF, TIFF, and BMP sources
 The local service is not an alternative annotation path, and pages ingested locally are not annotatable until they also reach the hosted workbench. A laptop-side upload cannot be made dataset-eligible: `tasks_provenance_bundle` requires `google_drive` origin with patient and encounter grouping, so files that belong in the dataset go into the Drive inbox and acquire real provenance from the worker. Do not add a local annotation UI back, and do not manufacture grouping identifiers to make a local upload look dataset-ready.
 
 Consequence to accept deliberately: `web/lib/validation.ts` is now the only annotation validator and has no second implementation to disagree with it. That is the point, but it means its own tests are the only guard, which is why D-017 put them in CI first.
+
+## D-019 — Mutation origin checks prefer a configured allowlist
+
+**Status:** Accepted, 17 August 2026
+
+`assertSameOrigin` built its expected origin from the request's own `x-forwarded-host` and `x-forwarded-proto` headers, so a request that supplied both a forged `Origin` and a matching forged forwarded host defined its own expectation and passed.
+
+This was not reachable from a browser: a cross-site `fetch` cannot set `x-forwarded-host` without triggering a preflight that the application does not answer, and the `sec-fetch-site` check already rejects cross-site requests from any modern browser. It was the wrong shape for a security check regardless, because it trusted attacker-controllable input to decide what the correct answer was.
+
+`DCAL_APP_ORIGIN` may now hold a comma-separated allowlist of absolute origins. When set it is authoritative, request headers cannot widen it, and the forwarded-header path is not consulted at all. When unset, the previous proxy-derived behaviour applies unchanged.
+
+It is optional rather than required because Vercel preview deployments get a new URL per branch. Pinning previews to a fixed origin would break every preview, and a variable that must be wrong somewhere gets ignored everywhere. Production sets it; previews do not.
+
+## D-020 — The queue endpoint is paginated
+
+**Status:** Accepted, 17 August 2026
+
+`GET /api/tasks` returned a hard-capped 250 rows with no way to reach the rest, alongside six exact `count` queries per request. At pilot scale that is invisible; at Drive-ingestion scale the queue silently stops showing pages that exist.
+
+The endpoint now accepts `limit` (1–1000, default 250) and `offset`, and reports `page: {limit, offset, returned}` so a client can tell a full page from the last one.
+
+The six exact counts are deliberately left alone. Replacing them with one aggregate needs a database function, and this change carries no migration; it is folded into the next migration batch instead of shipping a migration for a cost that is currently negligible.
