@@ -32,10 +32,8 @@ jobs:
         run: python scripts/bootstrap_label_studio_project.py --dry-run > /tmp/label-studio-project.json
       - name: Validate ingestion CLI
         run: python -m dcal_ingestion --help
-      - name: Validate workbench CLI and browser JavaScript
-        run: |
-          python -m dcal_workbench --help
-          node --check src/dcal_workbench/static/app.js
+      - name: Validate workbench CLI
+        run: python -m dcal_workbench --help
 
   hosted-workbench:
     runs-on: ubuntu-latest

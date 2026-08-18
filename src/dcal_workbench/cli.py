@@ -6,8 +6,6 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from dcal_annotations.taxonomy import DEFAULT_TAXONOMY_PATH
-
 from .server import create_server
 from .store import WorkbenchStore
 
@@ -15,7 +13,7 @@ from .store import WorkbenchStore
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="dcal-workbench",
-        description="Private DCAL page annotation workbench.",
+        description="Private DCAL page ingestion and upload service.",
     )
     parser.add_argument("--host", default=os.environ.get("DCAL_WORKBENCH_HOST", "127.0.0.1"))
     parser.add_argument(
@@ -30,11 +28,6 @@ def _parser() -> argparse.ArgumentParser:
         "--cache-root",
         type=Path,
         default=Path(os.environ.get("DCAL_PAGE_CACHE_ROOT", "data/images")),
-    )
-    parser.add_argument(
-        "--taxonomy",
-        type=Path,
-        default=Path(os.environ.get("DCAL_TAXONOMY_PATH", DEFAULT_TAXONOMY_PATH)),
     )
     return parser
 
@@ -51,9 +44,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not 1 <= args.port <= 65535:
         print("port must be between 1 and 65535", file=sys.stderr)
         return 2
-    store = WorkbenchStore(args.database, args.cache_root, args.taxonomy)
+    store = WorkbenchStore(args.database, args.cache_root)
     server = create_server(args.host, args.port, store, token)
-    print(f"DCAL workbench listening on http://{args.host}:{args.port}", flush=True)
+    print(f"DCAL ingestion service listening on http://{args.host}:{args.port}", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

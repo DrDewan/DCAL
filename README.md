@@ -74,7 +74,7 @@ The hosted pilot uses Vercel for the Next.js workbench and a DCAL-only Supabase 
 
 Required runtime variable names and operating procedures are documented in [`docs/DEPLOYMENT_RUNBOOK.md`](docs/DEPLOYMENT_RUNBOOK.md). Never commit or document real secret values.
 
-## Local compatibility start
+## Local ingestion and upload service
 
 Prerequisites: Docker with Docker Compose and Python 3.11+.
 
@@ -84,9 +84,9 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open `http://localhost:8090`.
+This starts an ingestion and upload service on `http://127.0.0.1:8090`. It renders PDFs and images into checksum-addressed pages, accepts Drive-worker ingestion, and exposes read-only task inspection. It has **no annotation interface** — annotation, review, and gold export live only in the hosted `web/` application, which enforces named identity and roles.
 
-The local SQLite workbench intentionally binds to `127.0.0.1` and has no human identity provider. Do not expose it to the internet. The hosted `web/` application is the multi-user product path. The local interface does not automatically include every hosted UX refinement.
+The service intentionally binds to `127.0.0.1` and has no human identity provider. Do not expose it to the internet.
 
 ## Dedicated Google Drive model
 
@@ -125,14 +125,7 @@ See [`docs/GOOGLE_DRIVE_RUNBOOK.md`](docs/GOOGLE_DRIVE_RUNBOOK.md) before connec
 
 Reviewers/admins can use **Export gold** in the hosted UI.
 
-Local compatibility endpoint:
-
-```bash
-curl --fail http://127.0.0.1:8090/api/export/gold.jsonl \
-  --output /secure/path/dcal-gold.jsonl
-```
-
-Only completed Drive-provenance pages are exported. Pilot browser uploads are skipped.
+Only completed Drive-provenance pages are exported. Pilot browser uploads are skipped. Export is a hosted, role-gated operation only; the local service does not export gold.
 
 The old Label Studio adapter remains available for historical exports:
 

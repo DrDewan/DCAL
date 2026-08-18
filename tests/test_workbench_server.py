@@ -15,8 +15,6 @@ from dcal_workbench.server import create_server
 from dcal_workbench.store import WorkbenchStore
 
 
-ROOT = Path(__file__).resolve().parents[1]
-TAXONOMY = ROOT / "config" / "taxonomy" / "bmch-document-taxonomy.v1.json"
 
 
 def synthetic_png() -> bytes:
@@ -29,7 +27,7 @@ class WorkbenchServerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         root = Path(self.temp.name)
-        store = WorkbenchStore(root / "state.sqlite3", root / "images", TAXONOMY)
+        store = WorkbenchStore(root / "state.sqlite3", root / "images")
         self.server = create_server("127.0.0.1", 0, store, "synthetic-ingestion-token")
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -45,14 +43,19 @@ class WorkbenchServerTests(unittest.TestCase):
         with urlopen(Request(f"{self.base_url}{path}", **kwargs), timeout=3) as response:
             return response, response.read()
 
-    def test_health_static_assets_and_security_headers(self) -> None:
+    def test_health_and_security_headers(self) -> None:
         response, body = self.request("/api/health")
         self.assertEqual({"status": "ok"}, json.loads(body))
         self.assertEqual("no-store", response.headers["Cache-Control"])
         self.assertIn("default-src 'self'", response.headers["Content-Security-Policy"])
-        response, body = self.request("/")
-        self.assertIn(b"DCAL Annotation Workbench", body)
-        self.assertTrue(response.headers["Content-Type"].startswith("text/html"))
+
+    def test_annotation_surface_is_not_served_locally(self) -> None:
+        # Annotation, taxonomy, and gold export live only in the hosted
+        # workbench, which enforces named identity and reviewer/admin roles.
+        for path in ("/", "/app.js", "/api/taxonomy", "/api/export/gold.jsonl"):
+            with self.assertRaises(HTTPError) as raised:
+                self.request(path)
+            self.assertEqual(404, raised.exception.code)
 
     def test_browser_upload_creates_a_pilot_task(self) -> None:
         boundary = "dcal-synthetic-boundary"
@@ -77,23 +80,8 @@ class WorkbenchServerTests(unittest.TestCase):
         self.assertTrue(image.startswith(b"\x89PNG\r\n\x1a\n"))
         _, raw_task = self.request(f"/api/tasks/{task_id}")
         task = json.loads(raw_task)
-        task["annotation"]["document_type"] = "unknown_document"
-        task["annotation"]["content_profile"] = "unknown"
-        body = json.dumps(
-            {
-                "annotation": task["annotation"],
-                "expected_version": task["version"],
-                "actor": "Synthetic Annotator",
-                "status": "completed",
-            }
-        ).encode("utf-8")
-        _, raw_saved = self.request(
-            f"/api/tasks/{task_id}",
-            data=body,
-            method="PUT",
-            headers={"Content-Type": "application/json"},
-        )
-        self.assertEqual("completed", json.loads(raw_saved)["status"])
+        self.assertEqual("unassigned", task["status"])
+        self.assertEqual([], task["annotation"]["regions"])
         _, queue = self.request("/api/tasks")
         self.assertEqual(1, json.loads(queue)["total"])
 
