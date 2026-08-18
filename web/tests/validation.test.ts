@@ -116,3 +116,40 @@ test("table dimensions and cell matrix must agree", () => {
     regions: [region],
   }, false), HttpError);
 });
+
+test("writers are optional and recorded as registry identifiers", () => {
+  const base = {
+    ...blankAnnotation(),
+    document_type: "bmch_admission_form",
+    content_profile: "printed_document",
+    regions: [validRegion()],
+  };
+  assert.deepEqual(validateAnnotation(base, true).writer_group_ids, []);
+
+  const withWriter = validateAnnotation({
+    ...base,
+    writer_group_ids: ["wri_abcdefghijklmnopqrstuvwx"],
+  }, true);
+  assert.deepEqual(withWriter.writer_group_ids, ["wri_abcdefghijklmnopqrstuvwx"]);
+});
+
+test("a writer label cannot be stored in place of an identifier", () => {
+  assert.throws(() => validateAnnotation({
+    ...blankAnnotation(),
+    document_type: "bmch_admission_form",
+    content_profile: "printed_document",
+    regions: [validRegion()],
+    writer_group_ids: ["Dr Synthetic Name"],
+  }, true), HttpError);
+});
+
+test("duplicate writers are rejected", () => {
+  const id = "wri_abcdefghijklmnopqrstuvwx";
+  assert.throws(() => validateAnnotation({
+    ...blankAnnotation(),
+    document_type: "bmch_admission_form",
+    content_profile: "printed_document",
+    regions: [validRegion()],
+    writer_group_ids: [id, id],
+  }, false), HttpError);
+});

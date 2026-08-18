@@ -87,6 +87,7 @@ A DCAL-only Supabase project exists and the repository migrations have been appl
 
 - `supabase/migrations/20260816040711_vercel_supabase_foundation.sql`
 - `supabase/migrations/20260816041807_align_completion_exceptions.sql`
+- `supabase/migrations/20260818041500_writer_registry.sql` — adds the writer registry and replaces `dcal_save_task`; the Writer inspector section errors until it is applied.
 - `supabase/migrations/20260818034500_page_access_audit.sql` — **verify this one has been applied**; it adds `public.page_access` and `dcal_record_page_access`. Until it is applied, page-image and export requests still succeed but every audit write fails and logs.
 
 The hosted workbench uses Supabase for:

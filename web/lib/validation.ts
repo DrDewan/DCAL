@@ -6,6 +6,8 @@ import {
 import { HttpError } from "@/lib/http";
 
 const REGION_ID = /^reg_[a-f0-9]{12,32}$/;
+const WRITER_ID = /^wri_[A-Za-z0-9_-]{20,64}$/;
+const MAX_WRITERS = 10;
 const FIELD_CODE = /^[a-z][a-z0-9_]*$/;
 const TABLE_MAX_ROWS = 100;
 const TABLE_MAX_COLUMNS = 12;
@@ -114,6 +116,16 @@ export function validateAnnotation(value: unknown, completing: boolean) {
   if (quality.includes("clear") && quality.length > 1) {
     invalid("Clear cannot be combined with an image defect.");
   }
+  // Optional by design: a signature is often absent or illegible, and
+  // abstention is a valid outcome (D-005). Values are opaque registry
+  // identifiers; the readable label never enters annotation state.
+  const writers = input.writer_group_ids ?? [];
+  if (!Array.isArray(writers) || !writers.every((item) => typeof item === "string" && WRITER_ID.test(item))) {
+    invalid("Writers must be recorded as registry identifiers.");
+  }
+  if (new Set(writers).size !== writers.length) invalid("Writers must be unique.");
+  if (writers.length > MAX_WRITERS) invalid(`A page may record at most ${MAX_WRITERS} writers.`);
+
   const notes = input.notes ?? "";
   if (typeof notes !== "string" || notes.length > 4000) {
     invalid("Notes must contain at most 4,000 characters.");
@@ -221,6 +233,7 @@ export function validateAnnotation(value: unknown, completing: boolean) {
     document_variant: variant,
     content_profile: contentProfile,
     image_quality: quality,
+    writer_group_ids: writers as string[],
     notes,
     regions: regions.sort((a, b) => a.reading_order - b.reading_order),
   };

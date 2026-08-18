@@ -211,3 +211,21 @@ Writer separation is not implemented and cannot currently be implemented. `write
 The requirement is kept rather than weakened, because it is correct: a model evaluated on handwriting from a writer it trained on reports an inflated score. But it must not be presented as satisfied. Until writer identity has a defensible source, no frozen dataset release may claim writer separation, and M2 split governance must treat this as an open blocker rather than assume the field is populated.
 
 Resolving it is a data-capture decision, not a coding one. The plausible sources are an annotator-supplied writer marker during annotation, a ward or clinician convention encoded at intake, or an explicit decision to defer writer-separated evaluation to a later milestone. That decision is outstanding.
+
+## D-024 — Writer identity is annotator-supplied, optional, and opaque
+
+**Status:** Accepted, 18 August 2026. Supersedes the "cannot be implemented" finding in D-023.
+
+D-023 recorded writer separation as an unimplementable gap because nothing in the Drive intake path knows who wrote on a page. That framing was too narrow: the information is on the page itself, in the signature, and a human annotator is already looking at it.
+
+Writers are therefore recorded during annotation, not during ingestion. `dcal.annotation.v2` gains an optional page-level `writer_group_ids` array, and `dcal_save_task` mirrors it onto `tasks.writer_group_ids`, so gold export and future split queries read one queryable column while the annotation keeps the versioned history of what the annotator judged.
+
+**Optional, not required.** Signatures are frequently absent, illegible, or ambiguous. Forcing a value would manufacture false grouping and contradict D-005. An empty array means "not recorded", never "no writer".
+
+**Opaque, not named.** A signature names a real clinician. Storing that name in the annotation would push an identifiable person into every gold export, which is exactly what D-006 and D-010 avoid for patients. The annotator types the name they see; `public.writers` maps it to a random `wri_` identifier; only the identifier reaches annotation state and gold. The readable label is operational data served to signed-in members for selection and nothing else.
+
+The identifier is random rather than an HMAC of the label. An HMAC of a human name is reversible by guessing names, which would defeat the purpose.
+
+**Registered, not invented.** `dcal_save_task` rejects any writer identifier absent from the active registry, mirroring the rule that ingestion may not invent grouping.
+
+Consequences to accept: writer grouping is only as good as annotator judgement, two annotators may register different labels for one clinician, and a page whose signature is illegible contributes nothing to writer separation. That is still strictly better than the previous state, where the field existed and was always empty. Writer-separated evaluation in M2 must report coverage — what fraction of test pages carry a writer at all — rather than assuming the field is populated.

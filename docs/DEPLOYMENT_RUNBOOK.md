@@ -69,6 +69,8 @@ The values have different purposes and must not be reused.
 | `DCAL_APP_ORIGIN` | Optional | No | No | Set on production only; leave unset on previews |
 
 Migrations are applied in filename order. `20260818034500_page_access_audit.sql` must be applied before the access audit records anything; the application degrades to logging audit failures rather than refusing requests, so a missing migration is silent from the user's side.
+
+`20260818041500_writer_registry.sql` adds `public.writers`, `dcal_create_writer`, and replaces `dcal_save_task` so it mirrors annotation-declared writers onto the task row. Unlike the audit migration this one is **not** silent: until it is applied, the Writer section fails to load and adding a writer returns an error. Apply it before announcing the feature to annotators.
 | `DCAL_GROUP_HMAC_KEY` | No | Yes | **Yes, identity-critical** | Do not rotate after ingestion without identity migration |
 | `DCAL_DRIVE_ROOT_FOLDER_ID` | No | Yes | Sensitive operational metadata | Change only with explicit Drive migration |
 | Google credential JSON | No | Yes | **Yes** | Rotate through Google Cloud/Workspace |
