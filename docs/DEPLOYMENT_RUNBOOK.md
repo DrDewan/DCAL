@@ -67,6 +67,8 @@ The values have different purposes and must not be reused.
 | `SUPABASE_SECRET_KEY` | Yes | No | **Yes** | Rotate after exposure; never prefix `NEXT_PUBLIC_` |
 | `DCAL_WORKBENCH_INGEST_TOKEN` | Yes | Yes | **Yes** | Rotate both ends together |
 | `DCAL_APP_ORIGIN` | Optional | No | No | Set on production only; leave unset on previews |
+
+Migrations are applied in filename order. `20260818034500_page_access_audit.sql` must be applied before the access audit records anything; the application degrades to logging audit failures rather than refusing requests, so a missing migration is silent from the user's side.
 | `DCAL_GROUP_HMAC_KEY` | No | Yes | **Yes, identity-critical** | Do not rotate after ingestion without identity migration |
 | `DCAL_DRIVE_ROOT_FOLDER_ID` | No | Yes | Sensitive operational metadata | Change only with explicit Drive migration |
 | Google credential JSON | No | Yes | **Yes** | Rotate through Google Cloud/Workspace |

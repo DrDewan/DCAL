@@ -181,7 +181,7 @@ Read [`docs/CHALLENGER_PLAYBOOK.md`](docs/CHALLENGER_PLAYBOOK.md) and [`docs/WIN
 - `patient_group_id` and `encounter_group_id` are opaque keyed identifiers, not raw hospital IDs or unsalted hashes.
 - Unknown/unreadable content must be labelled as such; never guess it into a known class/transcription.
 - Machine output never becomes human ground truth automatically.
-- Test pages must stay separated by patient and writer and unavailable to model tuning.
+- Test pages must stay separated by patient and writer and unavailable to model tuning. Patient/encounter separation is implemented; **writer separation is not** — `writer_group_ids` is always empty because no intake path captures writer identity (D-023).
 - Supabase/SQLite workbench state is mutable operational state, not a frozen dataset release or model registry.
 - Taxonomy changes must keep canonical config, web taxonomy copy, and compatibility aliases synchronized.
 

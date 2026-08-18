@@ -89,8 +89,27 @@ export async function POST(request: NextRequest) {
       updated_at: new Date().toISOString(),
     };
     if (existing) {
+      const previous = await admin
+        .from("tasks")
+        .select("storage_path")
+        .eq("id", existing.id)
+        .maybeSingle();
+      if (previous.error) throw previous.error;
       const { error } = await admin.from("tasks").update(provenance).eq("id", existing.id);
       if (error) throw error;
+      // Promotion repoints the row at the canonical Drive page. The pilot
+      // upload object it used to reference still holds the same clinical page
+      // and is now unreachable through the application, so it is removed
+      // rather than left in the bucket indefinitely.
+      const stalePath = previous.data?.storage_path;
+      if (stalePath && stalePath !== task.storagePath && stalePath.startsWith("pilot/")) {
+        const removal = await admin.storage.from(PAGE_BUCKET).remove([stalePath]);
+        if (removal.error) {
+          console.error("DCAL orphaned pilot page removal failed", {
+            error_code: removal.error.name,
+          });
+        }
+      }
       return NextResponse.json({ id: Number(existing.id), created: false });
     }
     const inserted = await admin

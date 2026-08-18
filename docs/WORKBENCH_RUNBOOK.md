@@ -155,6 +155,8 @@ The hosted endpoint is `GET /api/export/gold.jsonl`. It requires an active revie
 
 There is no local export path. Gold export exists only in the hosted workbench, where reviewer/admin roles are enforced against named accounts.
 
+Every export is recorded in `public.page_access` with the actor, their role, and the record count, as is every page-image read. Reviewing that log is a deliberate database operation; the application exposes no interface for it.
+
 Export includes only completed, Drive-provenance tasks. The file contains clinical text and must remain in approved encrypted storage; never commit it to Git or attach it to ordinary tickets/chats.
 
 Gold export is not yet a frozen dataset release. M2 will add release manifests, patient/writer-separated splits, adjudication, and immutable snapshots.

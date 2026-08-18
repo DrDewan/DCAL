@@ -1,3 +1,4 @@
+import { recordPageAccess } from "@/lib/audit";
 import { requireExportMember } from "@/lib/auth";
 import { jsonError } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -10,7 +11,7 @@ const PAGE_SIZE = 500;
 
 export async function GET() {
   try {
-    await requireExportMember();
+    const member = await requireExportMember();
     const admin = createAdminClient();
     const lines: string[] = [];
     let skippedInvalid = 0;
@@ -37,6 +38,7 @@ export async function GET() {
       }
       if (rows.length < PAGE_SIZE) break;
     }
+    await recordPageAccess(member.id, { action: "export_gold", recordCount: lines.length });
     return new Response(lines.length ? `${lines.join("\n")}\n` : "", {
       headers: {
         "Content-Type": "application/x-ndjson; charset=utf-8",

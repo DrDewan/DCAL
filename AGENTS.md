@@ -34,6 +34,7 @@ If these artifacts conflict, stop and report the conflict. Authority is roadmap,
 - Machine output never becomes human ground truth automatically.
 - `unknown_document`, `unknown_region`, and `illegible` are valid outcomes. Do not force certainty.
 - Never tune on the sealed test set. Split by patient and writer before model development.
+- Writer separation is **not implemented**: `writer_group_ids` is always empty and no intake path captures writer identity (D-023). Patient/encounter separation is real. Do not describe writer separation as satisfied, and do not freeze a release claiming it.
 - Static printed template text should come from registered templates where possible; do not repeatedly OCR known boilerplate and count it as model accuracy.
 - Claude, OpenAI, local OCR, and future providers participate through the same challenger contracts, dataset snapshots, scoring, and promotion gates.
 - Winning components from losing challengers should be harvested into `docs/WINNING_COMPONENTS.md` when they are reusable and evidence backed.
