@@ -118,6 +118,14 @@ A typical CBC layout may use:
 
 The parent region uses `label: "other_region"`, `structure_role: "table"`, and structured `table_data`. See `TABLE_ENTRY_V2.md` and `DATA_CONTRACT.md`.
 
+## Writer identity
+
+The inspector has an optional **Writer** section. If the page carries a legible signature, type the name as signed and press Add; if the writer is already registered, it is reused, otherwise a new registry entry is created.
+
+Leave it empty whenever the signature is absent, illegible, or ambiguous. An empty value means "not recorded" and is a correct outcome; guessing a writer manufactures false grouping and corrupts writer-separated evaluation.
+
+The name you type is stored only in the operational `public.writers` registry so annotators can select the same clinician consistently. The annotation and every gold record carry an opaque `wri_` identifier instead. Never put a clinician's name anywhere else in an annotation, including page notes.
+
 ## Upload behavior
 
 The hosted browser panel accepts JPEG, PNG, or WebP pages. Large images are resized in the browser to fit hosted request limits, then normalized server-side. The UI can accept multiple selections and uploads them sequentially. These pages are pilot-only.

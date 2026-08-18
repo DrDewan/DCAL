@@ -133,6 +133,17 @@ export function workbenchMarkup(canExport: boolean) {
             </section>
 
             <section class="inspector-section">
+              <div class="section-heading"><p class="eyebrow">Writer</p><span class="field-hint">optional</span></div>
+              <p class="input-help">Record who signed the page, if a signature is visible and legible. Leave empty otherwise.</p>
+              <div class="writer-chips" id="writer-chips"></div>
+              <label class="field-label">Name as signed
+                <input id="writer-input" type="text" maxlength="120" list="writer-options" placeholder="Start typing or add a new writer" autocomplete="off">
+              </label>
+              <datalist id="writer-options"></datalist>
+              <button class="secondary-button" id="writer-add" type="button">Add writer</button>
+            </section>
+
+            <section class="inspector-section">
               <label class="field-label">Page notes<textarea id="page-notes" rows="3" maxlength="4000" placeholder="Layout uncertainty or quality explanation. Never infer clinical content."></textarea></label>
             </section>
           </aside>

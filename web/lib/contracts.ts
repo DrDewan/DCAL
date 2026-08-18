@@ -62,6 +62,7 @@ export function blankAnnotation() {
     document_variant: null,
     content_profile: null,
     image_quality: [] as string[],
+    writer_group_ids: [] as string[],
     notes: "",
     regions: [] as Record<string, unknown>[],
   };

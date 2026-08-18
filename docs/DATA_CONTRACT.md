@@ -48,6 +48,7 @@ The first-party workbench stores mutable `dcal.annotation.v2` state:
   "document_variant": "bmch_admission_form_v1",
   "content_profile": "printed_blank_form",
   "image_quality": ["clear"],
+  "writer_group_ids": [],
   "notes": "",
   "regions": []
 }
@@ -57,6 +58,16 @@ The first-party workbench stores mutable `dcal.annotation.v2` state:
 
 Each successful save increments an integer version and appends a revision containing annotator display name, action, normalized annotation JSON, and timestamp. Updates are rejected when expected version is stale. Revision history is operational evidence, not a frozen dataset release.
 
+## Writer identity
+
+`writer_group_ids` is an optional page-level array of opaque writer identifiers, supplied by the annotator from a visible signature.
+
+It is optional on purpose. Signatures are frequently absent, illegible, or ambiguous, and abstention is a valid outcome (D-005). An empty array means "not recorded", never "no writer".
+
+Values are registry identifiers matching `^wri_[A-Za-z0-9_-]{20,64}$`. The readable label a signature carries names a real clinician and lives only in the operational `public.writers` registry. **A label must never appear in annotation state or in a gold record.** The identifier is random rather than derived from the label, because a hash of a name is reversible by guessing names.
+
+At most ten writers may be recorded per page. Each must already exist in the registry; an annotation may not invent grouping identity, exactly as ingestion may not (D-010).
+
 ## Required page annotation
 
 - Exactly one physical document type.
@@ -64,6 +75,7 @@ Each successful save increments an integer version and appends a revision contai
 - Exactly one content profile before completion.
 - Zero or more image-quality flags.
 - Page notes optional.
+- Writer identifiers optional; zero or more registered writers.
 
 Clinical pages, including financial/billing documents, require at least one region. Blank, duplicate, non-clinical cover, and unknown pages may contain no OCR regions.
 

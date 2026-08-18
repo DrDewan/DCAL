@@ -16,6 +16,7 @@ const regionColors = {
 
 const state = {
   taxonomy: null,
+  writers: [],
   queue: null,
   task: null,
   member: null,
@@ -312,6 +313,7 @@ function renderTask() {
   $("#document-variant").value = task.annotation.document_variant || "";
   $("#content-profile").value = task.annotation.content_profile || "";
   $("#page-notes").value = task.annotation.notes || "";
+  renderWriters();
   $$(".quality-chip").forEach((button) => button.classList.toggle("selected", task.annotation.image_quality.includes(button.dataset.value)));
   renderInspector();
   setSaveState("saved");
@@ -753,7 +755,89 @@ function setZoom(value) {
 
 function fitPage() { state.zoom = 1; state.panX = 0; state.panY = 0; $("#zoom-label").textContent = "Fit"; resizeCanvas(); }
 
+// The writer registry stores an opaque identifier per clinician; the readable
+// label is operational only and never reaches the annotation or gold export.
+function writerLabel(id) {
+  return state.writers.find((item) => item.id === id)?.label || id;
+}
+
+function renderWriters() {
+  const chips = $("#writer-chips");
+  if (!chips || !state.task) return;
+  const selected = state.task.annotation.writer_group_ids || [];
+  chips.replaceChildren();
+  selected.forEach((id) => {
+    const chip = document.createElement("span");
+    chip.className = "writer-chip";
+    const name = document.createElement("span");
+    name.textContent = writerLabel(id);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.setAttribute("aria-label", `Remove ${writerLabel(id)}`);
+    remove.textContent = "×";
+    remove.addEventListener("click", () => {
+      state.task.annotation.writer_group_ids = selected.filter((item) => item !== id);
+      markDirty();
+      renderWriters();
+    });
+    chip.append(name, remove);
+    chips.append(chip);
+  });
+}
+
+function fillWriterOptions() {
+  const list = $("#writer-options");
+  if (!list) return;
+  list.replaceChildren();
+  state.writers.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.label;
+    list.append(option);
+  });
+}
+
+async function loadWriters() {
+  const payload = await api("/api/writers");
+  state.writers = payload.writers || [];
+  fillWriterOptions();
+}
+
+async function addWriter() {
+  if (!state.task) return;
+  const input = $("#writer-input");
+  const label = input.value.trim();
+  if (!label) return;
+  try {
+    const known = state.writers.find(
+      (item) => item.label.toLowerCase() === label.toLowerCase(),
+    );
+    const writer = known || await api("/api/writers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label }),
+    });
+    if (!known) {
+      state.writers = [...state.writers, { id: writer.id, label: writer.label }]
+        .sort((a, b) => a.label.localeCompare(b.label));
+      fillWriterOptions();
+    }
+    const selected = state.task.annotation.writer_group_ids || [];
+    if (!selected.includes(writer.id)) {
+      state.task.annotation.writer_group_ids = [...selected, writer.id];
+      markDirty();
+    }
+    input.value = "";
+    renderWriters();
+  } catch (error) {
+    toast(error.message, "error");
+  }
+}
+
 function bindFields() {
+  $("#writer-add").addEventListener("click", addWriter);
+  $("#writer-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); addWriter(); }
+  });
   $("#document-type").addEventListener("change", (event) => {
     state.task.annotation.document_type = event.target.value || null;
     state.task.annotation.document_variant = null;
@@ -813,6 +897,7 @@ async function init() {
     await loadIdentity();
     state.taxonomy = await api("/api/taxonomy");
     fillTaxonomy();
+    await loadWriters();
     await loadQueue();
     const id = location.hash.match(/^#(page_[0-9]{6,})$/)?.[1];
     if (id) await openTask(id);
