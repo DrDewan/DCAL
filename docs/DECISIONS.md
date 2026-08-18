@@ -177,3 +177,37 @@ It is optional rather than required because Vercel preview deployments get a new
 The endpoint now accepts `limit` (1–1000, default 250) and `offset`, and reports `page: {limit, offset, returned}` so a client can tell a full page from the last one.
 
 The six exact counts are deliberately left alone. Replacing them with one aggregate needs a database function, and this change carries no migration; it is folded into the next migration batch instead of shipping a migration for a cost that is currently negligible.
+
+## D-021 — Clinical page reads are audited, not only writes
+
+**Status:** Accepted, 18 August 2026
+
+`public.revisions` recorded who *changed* an annotation. Nothing recorded who *read* a patient page or extracted the dataset, which is the question an institutional access review actually asks. A reviewer could open every page in the queue and export the whole gold set leaving no trace.
+
+`public.page_access` is an append-only log written by the two server routes that hand over patient content: `GET /api/tasks/{id}/image` and `GET /api/export/gold.jsonl`. It records actor identity, the actor's role at the time, the action, and either the page or the exported record count.
+
+Auditing is deliberately limited to those two routes. Logging every queue listing and task-metadata read would bury real access events in navigation noise and add a write to nearly every request.
+
+An audit write failure logs but does not fail the user's request. Losing an audit row is bad; blocking a clinician mid-annotation because an audit insert failed is worse, and the failure is visible in server logs.
+
+This is an application-level record, not tamper-proof storage. The service key can modify any table, so `page_access` evidences routine access patterns; it is not proof against an attacker who already holds the secret key. Real tamper-evidence needs append-only external log shipping and is out of scope for M1.
+
+## D-022 — Promotion to dataset-eligible removes the superseded pilot object
+
+**Status:** Accepted, 18 August 2026
+
+When Drive ingestion matches an existing browser-uploaded page, `POST /api/ingestion/tasks` repoints the row from `pilot/<user>/<sha>.png` to the canonical `pages/<xx>/<sha>.png`. The pilot object was left in the bucket permanently: unreachable through the application, invisible to every listing, and still holding the same clinical page.
+
+The route now removes the superseded pilot object after a successful promotion, guarded so it only ever deletes a `pilot/` path that the row itself previously referenced and that differs from the new canonical path. Removal failure is logged without page detail and does not fail ingestion, since the provenance update has already succeeded and re-running ingestion must stay idempotent.
+
+## D-023 — Writer separation is a recorded gap, not an implemented control
+
+**Status:** Accepted, 18 August 2026
+
+`AGENTS.md` and `README.md` both require test pages to be separated by patient **and writer** before model development. Patient and encounter separation are real: the Drive adapter HMACs folder identity into `patient_group_id` and `encounter_group_id`.
+
+Writer separation is not implemented and cannot currently be implemented. `writer_group_ids` is hardcoded to `[]` in `src/dcal_ingestion/service.py`. Nothing in the intake path knows who wrote on a page: the Drive hierarchy is patient folder, then encounter folder, then files, and D-010 forbids inventing grouping that the structure does not contain. The column, the ingestion contract field, and the gold record field all exist and are all always empty.
+
+The requirement is kept rather than weakened, because it is correct: a model evaluated on handwriting from a writer it trained on reports an inflated score. But it must not be presented as satisfied. Until writer identity has a defensible source, no frozen dataset release may claim writer separation, and M2 split governance must treat this as an open blocker rather than assume the field is populated.
+
+Resolving it is a data-capture decision, not a coding one. The plausible sources are an annotator-supplied writer marker during annotation, a ward or clinician convention encoded at intake, or an explicit decision to defer writer-separated evaluation to a later milestone. That decision is outstanding.

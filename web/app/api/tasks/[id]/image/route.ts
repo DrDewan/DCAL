@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 
+import { recordPageAccess } from "@/lib/audit";
 import { requireActiveMember } from "@/lib/auth";
 import { jsonError, HttpError } from "@/lib/http";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -12,7 +13,7 @@ type Context = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, context: Context) {
   try {
-    await requireActiveMember();
+    const member = await requireActiveMember();
     const { id: publicId } = await context.params;
     const taskId = parseTaskId(publicId);
     const admin = createAdminClient();
@@ -29,6 +30,7 @@ export async function GET(_request: NextRequest, context: Context) {
     if (result.error || !result.data) {
       throw new HttpError(404, "image_unavailable", "Page image is unavailable.");
     }
+    await recordPageAccess(member.id, { action: "view_image", taskId });
     return new Response(await result.data.arrayBuffer(), {
       headers: {
         "Content-Type": result.data.type || "image/png",
