@@ -797,8 +797,15 @@ function fillWriterOptions() {
 }
 
 async function loadWriters() {
-  const payload = await api("/api/writers");
-  state.writers = payload.writers || [];
+  // The registry is optional metadata. It must never be able to stop the
+  // workbench loading: before its migration is applied this endpoint fails,
+  // and an unguarded throw here would abort init before the queue loads.
+  try {
+    const payload = await api("/api/writers");
+    state.writers = payload.writers || [];
+  } catch {
+    state.writers = [];
+  }
   fillWriterOptions();
 }
 
