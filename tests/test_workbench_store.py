@@ -1,21 +1,17 @@
 from __future__ import annotations
 
 import io
-import json
 import tempfile
 import unittest
 from pathlib import Path
 
+import pymupdf
 from PIL import Image
 
 from dcal_ingestion.cache import label_studio_local_url
 from dcal_ingestion.identity import task_ingestion_key
 from dcal_ingestion.models import INGESTION_SCHEMA, RENDER_PROFILE
-from dcal_workbench.store import UploadItem, VersionConflict, WorkbenchError, WorkbenchStore
-
-
-ROOT = Path(__file__).resolve().parents[1]
-TAXONOMY = ROOT / "config" / "taxonomy" / "bmch-document-taxonomy.v1.json"
+from dcal_workbench.store import UploadItem, WorkbenchError, WorkbenchStore
 
 
 def synthetic_png(color: str = "white") -> bytes:
@@ -24,84 +20,56 @@ def synthetic_png(color: str = "white") -> bytes:
     return output.getvalue()
 
 
-def completed_annotation() -> dict[str, object]:
-    return {
-        "schema_version": "dcal.annotation.v2",
-        "document_type": "bmch_admission_form",
-        "document_variant": "bmch_admission_form_v1",
-        "content_profile": "printed_blank_form",
-        "image_quality": ["clear"],
-        "notes": "Synthetic test page",
-        "regions": [
-            {
-                "id": "reg_0123456789abcdef",
-                "label": "printed_static",
-                "structure_role": "form_field",
-                "legibility": "legible",
-                "reading_order": 1,
-                "field_code": "admission_heading",
-                "transcription": "SYNTHETIC ADMISSION FORM",
-                "x": 10.0,
-                "y": 8.0,
-                "width": 80.0,
-                "height": 10.0,
-            }
-        ],
-    }
+def synthetic_pdf(pages: int = 2) -> bytes:
+    document = pymupdf.open()
+    for index in range(pages):
+        # Distinct geometry per page; identical blank pages would render to
+        # identical bytes and correctly deduplicate to a single task.
+        document.new_page(width=300 + index * 10, height=400)
+    content = document.tobytes()
+    document.close()
+    return content
 
 
-def table_annotation() -> dict[str, object]:
+def ingestion_payload(sha256: str) -> dict[str, object]:
     return {
-        "schema_version": "dcal.annotation.v2",
-        "document_type": "bmch_haematology_report",
-        "document_variant": None,
-        "content_profile": "printed_filled_form",
-        "image_quality": ["clear"],
-        "notes": "Synthetic investigation table",
-        "regions": [
-            {
-                "id": "reg_abcdef012345",
-                "label": "other_region",
-                "structure_role": "table",
-                "legibility": "not_applicable",
-                "reading_order": 1,
-                "field_code": "cbc_results",
-                "transcription": "",
-                "table_data": {
-                    "rows": 3,
-                    "columns": 4,
-                    "header_rows": 1,
-                    "column_labels": [
-                        "printed_static",
-                        "printed_variable",
-                        "printed_static",
-                        "printed_static",
-                    ],
-                    "cells": [
-                        ["Test", "Result", "Unit", "Reference"],
-                        ["White Blood Cells", "07.50", "10^9/L", "4.00 - 11.00"],
-                        ["Haemoglobin", "13.40", "g/dL", "13 - 18"],
-                    ],
-                },
-                "x": 8.0,
-                "y": 31.0,
-                "width": 84.0,
-                "height": 52.0,
-            }
-        ],
+        "image": label_studio_local_url(sha256),
+        "source_object_id": "src_opaque",
+        "source_sha256": sha256,
+        "raw_source_sha256": "a" * 64,
+        "patient_group_id": "pat_opaque",
+        "encounter_group_id": "enc_opaque",
+        "writer_group_ids": [],
+        "source_page_index": 1,
+        "annotation_schema_version": "dcal.annotation.v1",
+        "ingestion_schema_version": INGESTION_SCHEMA,
+        "render_profile": RENDER_PROFILE,
+        "dcal_ingestion_key": task_ingestion_key(sha256),
     }
 
 
 class WorkbenchStoreTests(unittest.TestCase):
+    """The local store is an ingestion sink and upload renderer only.
+
+    Annotation, validation, and gold export belong to the hosted workbench.
+    """
+
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
         root = Path(self.temp.name)
-        self.store = WorkbenchStore(root / "workbench.sqlite3", root / "images", TAXONOMY)
+        self.store = WorkbenchStore(root / "workbench.sqlite3", root / "images")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def test_manual_upload_is_deduplicated_and_not_export_eligible(self) -> None:
+    def page_checksum(self, task_id: str) -> str:
+        numeric = int(task_id.split("_", 1)[1])
+        with self.store._connect() as connection:  # test-only identity inspection
+            return connection.execute(
+                "SELECT source_sha256 FROM tasks WHERE id=?", (numeric,)
+            ).fetchone()[0]
+
+    def test_manual_upload_is_deduplicated_and_not_dataset_eligible(self) -> None:
         upload = UploadItem(synthetic_png(), "image/png")
         first = self.store.upload_sources([upload])
         second = self.store.upload_sources([upload])
@@ -109,170 +77,43 @@ class WorkbenchStoreTests(unittest.TestCase):
         self.assertFalse(second[0]["created"])
         task = self.store.get_task(first[0]["id"])
         self.assertFalse(task["dataset_eligible"])
-        saved = self.store.save_task(
-            task["id"],
-            annotation=completed_annotation(),
-            expected_version=task["version"],
-            actor="Synthetic Annotator",
-            status="completed",
-        )
-        self.assertEqual("completed", saved["status"])
-        content, summary = self.store.export_gold()
-        self.assertEqual("", content)
-        self.assertEqual(1, summary["skipped_manual_without_grouping"])
-        reopened = self.store.save_task(
-            saved["id"],
-            annotation=saved["annotation"],
-            expected_version=saved["version"],
-            actor="Synthetic Annotator",
-        )
-        self.assertEqual("in_progress", reopened["status"])
-        content, summary = self.store.export_gold()
-        self.assertEqual("", content)
-        self.assertEqual(0, summary["skipped_manual_without_grouping"])
+        self.assertEqual("manual_upload", task["source_origin"])
 
-    def test_drive_import_upgrades_manual_page_and_exports_gold(self) -> None:
+    def test_a_multi_page_pdf_becomes_one_task_per_page(self) -> None:
+        results = self.store.upload_sources([UploadItem(synthetic_pdf(3), "application/pdf")])
+        self.assertEqual(3, len(results))
+        self.assertEqual(3, len({item["id"] for item in results}))
+        for item in results:
+            self.assertTrue(item["created"])
+            self.assertTrue(self.store.image_path(item["id"]).is_file())
+
+    def test_drive_import_upgrades_a_manual_page_to_dataset_eligible(self) -> None:
         uploaded = self.store.upload_sources([UploadItem(synthetic_png("ivory"), "image/png")])
-        task = self.store.get_task(uploaded[0]["id"])
-        with self.store._connect() as connection:  # test-only identity inspection
-            sha = connection.execute(
-                "SELECT source_sha256 FROM tasks WHERE id=1"
-            ).fetchone()[0]
-        task_id, created = self.store.import_ingestion_task(
-            {
-                "image": label_studio_local_url(sha),
-                "source_object_id": "src_opaque",
-                "source_sha256": sha,
-                "raw_source_sha256": "a" * 64,
-                "patient_group_id": "pat_opaque",
-                "encounter_group_id": "enc_opaque",
-                "writer_group_ids": [],
-                "source_page_index": 1,
-                "annotation_schema_version": "dcal.annotation.v1",
-                "ingestion_schema_version": INGESTION_SCHEMA,
-                "render_profile": RENDER_PROFILE,
-                "dcal_ingestion_key": task_ingestion_key(sha),
-            }
-        )
+        sha = self.page_checksum(uploaded[0]["id"])
+        task_id, created = self.store.import_ingestion_task(ingestion_payload(sha))
         self.assertFalse(created)
-        self.assertEqual(1, task_id)
-        upgraded = self.store.get_task(task["id"])
+        upgraded = self.store.get_task(uploaded[0]["id"])
+        self.assertEqual(task_id, int(uploaded[0]["id"].split("_", 1)[1]))
         self.assertTrue(upgraded["dataset_eligible"])
-        completed = self.store.save_task(
-            upgraded["id"],
-            annotation=completed_annotation(),
-            expected_version=upgraded["version"],
-            actor="Synthetic Annotator",
-            status="completed",
-        )
-        content, summary = self.store.export_gold()
-        record = json.loads(content)
-        self.assertEqual(1, summary["exported"])
-        self.assertEqual("dcal_workbench", record["annotation"]["source"])
-        self.assertEqual("pat_opaque", record["source"]["patient_group_id"])
-        self.assertEqual(completed["id"], record["annotation"]["workbench_task_id"])
+        self.assertEqual("google_drive", upgraded["source_origin"])
 
-    def test_structured_table_survives_save_and_gold_export(self) -> None:
+    def test_ingestion_index_exposes_every_task_key(self) -> None:
         uploaded = self.store.upload_sources([UploadItem(synthetic_png("linen"), "image/png")])
-        with self.store._connect() as connection:  # test-only identity inspection
-            sha = connection.execute(
-                "SELECT source_sha256 FROM tasks WHERE id=1"
-            ).fetchone()[0]
-        self.store.import_ingestion_task(
-            {
-                "image": label_studio_local_url(sha),
-                "source_object_id": "src_opaque",
-                "source_sha256": sha,
-                "raw_source_sha256": "a" * 64,
-                "patient_group_id": "pat_opaque",
-                "encounter_group_id": "enc_opaque",
-                "writer_group_ids": [],
-                "source_page_index": 1,
-                "annotation_schema_version": "dcal.annotation.v1",
-                "ingestion_schema_version": INGESTION_SCHEMA,
-                "render_profile": RENDER_PROFILE,
-                "dcal_ingestion_key": task_ingestion_key(sha),
-            }
-        )
-        task = self.store.get_task(uploaded[0]["id"])
-        saved = self.store.save_task(
-            task["id"],
-            annotation=table_annotation(),
-            expected_version=task["version"],
-            actor="Synthetic Annotator",
-            status="completed",
-        )
-        stored_table = saved["annotation"]["regions"][0]["table_data"]
-        self.assertEqual(3, stored_table["rows"])
-        self.assertEqual("07.50", stored_table["cells"][1][1])
+        sha = self.page_checksum(uploaded[0]["id"])
+        index = self.store.task_index()
+        self.assertIn(task_ingestion_key(sha), index)
 
-        content, summary = self.store.export_gold()
-        record = json.loads(content)
-        self.assertEqual(1, summary["exported"])
-        exported_table = record["regions"][0]["table_data"]
-        self.assertEqual(stored_table, exported_table)
-
-    def test_table_payload_is_rejected_on_a_non_table_region(self) -> None:
-        task_id = self.store.upload_sources(
-            [UploadItem(synthetic_png("azure"), "image/png")]
-        )[0]["id"]
-        task = self.store.get_task(task_id)
-        annotation = completed_annotation()
-        annotation["regions"][0]["table_data"] = table_annotation()["regions"][0]["table_data"]
-        with self.assertRaisesRegex(WorkbenchError, "not marked as a table"):
-            self.store.save_task(
-                task["id"],
-                annotation=annotation,
-                expected_version=task["version"],
-                actor="Synthetic Annotator",
-                status="completed",
-            )
-
-    def test_completion_contract_and_optimistic_locking(self) -> None:
-        task_id = self.store.upload_sources([UploadItem(synthetic_png("gray"), "image/png")])[0]["id"]
-        task = self.store.get_task(task_id)
-        with self.assertRaisesRegex(WorkbenchError, "physical document type"):
-            self.store.save_task(
-                task_id,
-                annotation=task["annotation"],
-                expected_version=task["version"],
-                actor="Synthetic Annotator",
-                status="completed",
-            )
-        first = self.store.save_task(
-            task_id,
-            annotation=completed_annotation(),
-            expected_version=task["version"],
-            actor="Synthetic Annotator",
-        )
-        with self.assertRaises(VersionConflict):
-            self.store.save_task(
-                task_id,
-                annotation=completed_annotation(),
-                expected_version=task["version"],
-                actor="Another Annotator",
-            )
-        self.assertEqual(2, first["version"])
+    def test_ingestion_rejects_a_key_that_does_not_match_the_checksum(self) -> None:
+        uploaded = self.store.upload_sources([UploadItem(synthetic_png("beige"), "image/png")])
+        sha = self.page_checksum(uploaded[0]["id"])
+        payload = ingestion_payload(sha)
+        payload["dcal_ingestion_key"] = task_ingestion_key("f" * 64)
+        with self.assertRaisesRegex(WorkbenchError, "does not match page checksum"):
+            self.store.import_ingestion_task(payload)
 
     def test_ingestion_rejects_missing_cached_image(self) -> None:
-        sha = "b" * 64
         with self.assertRaisesRegex(WorkbenchError, "not present"):
-            self.store.import_ingestion_task(
-                {
-                    "image": label_studio_local_url(sha),
-                    "source_object_id": "src_opaque",
-                    "source_sha256": sha,
-                    "raw_source_sha256": "c" * 64,
-                    "patient_group_id": "pat_opaque",
-                    "encounter_group_id": "enc_opaque",
-                    "writer_group_ids": [],
-                    "source_page_index": 1,
-                    "annotation_schema_version": "dcal.annotation.v1",
-                    "ingestion_schema_version": INGESTION_SCHEMA,
-                    "render_profile": RENDER_PROFILE,
-                    "dcal_ingestion_key": task_ingestion_key(sha),
-                }
-            )
+            self.store.import_ingestion_task(ingestion_payload("b" * 64))
 
 
 if __name__ == "__main__":

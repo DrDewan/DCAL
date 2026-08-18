@@ -122,7 +122,7 @@ The parent region uses `label: "other_region"`, `structure_role: "table"`, and s
 
 The hosted browser panel accepts JPEG, PNG, or WebP pages. Large images are resized in the browser to fit hosted request limits, then normalized server-side. The UI can accept multiple selections and uploads them sequentially. These pages are pilot-only.
 
-The local compatibility panel accepts JPEG, PNG, TIFF, WebP, BMP, and PDF. The Drive worker is the production path for every PDF and dataset-ready image. It normalizes sources to 300-DPI RGB PNG, limits source size/page count/pixel count, calculates SHA-256, and globally deduplicates identical rendered pages. Filenames are not stored or logged.
+The local ingestion service accepts JPEG, PNG, TIFF, WebP, BMP, and PDF, which is why it is retained: the hosted upload route cannot accept PDFs inside a Vercel function (D-013). The Drive worker is the production path for every PDF and dataset-ready image. It normalizes sources to 300-DPI RGB PNG, limits source size/page count/pixel count, calculates SHA-256, and globally deduplicates identical rendered pages. Filenames are not stored or logged.
 
 Browser uploads are deliberately not allowed to invent patient or encounter groups. To build the real dataset, upload into the dedicated Drive hierarchy in `GOOGLE_DRIVE_RUNBOOK.md` and run the ingestion profile.
 
@@ -153,18 +153,13 @@ The hosted endpoint is `GET /api/export/gold.jsonl`. It requires an active revie
 - `X-DCAL-Exported` — records written.
 - `X-DCAL-Skipped-Invalid` — completed dataset-eligible rows that no longer satisfy the completion contract and were omitted. A non-zero value means stored annotation state drifted from the current taxonomy or validation rules; investigate before treating the file as a complete extract.
 
-For the local compatibility server:
-
-```bash
-curl --fail http://127.0.0.1:8090/api/export/gold.jsonl \
-  --output /secure/path/dcal-gold.jsonl
-```
+There is no local export path. Gold export exists only in the hosted workbench, where reviewer/admin roles are enforced against named accounts.
 
 Export includes only completed, Drive-provenance tasks. The file contains clinical text and must remain in approved encrypted storage; never commit it to Git or attach it to ordinary tickets/chats.
 
 Gold export is not yet a frozen dataset release. M2 will add release manifests, patient/writer-separated splits, adjudication, and immutable snapshots.
 
-## Private local compatibility start
+## Private local ingestion service
 
 Create configuration and secrets:
 
@@ -173,7 +168,7 @@ cp .env.example .env
 openssl rand -hex 32
 ```
 
-Put the generated workbench token in `.env`. It authenticates ingestion, not human browser sessions.
+Put the generated workbench token in `.env`. It authenticates the Drive worker. The local service has no human authentication and no annotation interface, so it must stay on loopback.
 
 Start:
 
@@ -182,7 +177,7 @@ docker compose up -d workbench
 docker compose ps
 ```
 
-Open `http://127.0.0.1:8090`.
+The service exposes `/api/health`, `/api/uploads`, `/api/ingestion/tasks`, and read-only task/image inspection. There is no browser annotation UI; use the hosted workbench for annotation.
 
 For development without Docker:
 

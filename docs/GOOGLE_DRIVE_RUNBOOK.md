@@ -98,7 +98,7 @@ docker compose --profile ingestion run --rm --no-deps dcal-ingest sync-once
 docker compose --profile ingestion up -d dcal-ingest
 ```
 
-For a completely local compatibility stack, leave `DCAL_WORKBENCH_URL=http://workbench:8090` and start both services.
+To run the worker against the local ingestion service instead of the hosted workbench, leave `DCAL_WORKBENCH_URL=http://workbench:8090` and start both services. Pages ingested this way are not annotatable until they also reach the hosted workbench.
 
 ```bash
 # Verify credentials and the six required folder roles.
@@ -122,7 +122,7 @@ All routine command output is aggregate JSON. It does not print source filenames
 ## Recovery and backup
 
 - Google Drive holds original sources and canonical rendered pages.
-- Hosted Supabase PostgreSQL holds tasks and annotation revisions; back it up independently and test recovery. The local compatibility server instead uses `dcal_workbench_state` and its SQLite WAL.
+- Hosted Supabase PostgreSQL holds tasks and annotation revisions; back it up independently and test recovery. The local ingestion service instead uses `dcal_workbench_state` and its SQLite WAL, which holds ingestion state only.
 - `dcal_ingestion_state` contains the SQLite operational ledger; back up the volume, although task idempotency also reconciles against the workbench.
 - `dcal_page_cache` is disposable and can be rebuilt with `restore-cache`.
 - Preserve the HMAC key in a secure secret manager and an offline recovery record. Losing it makes new grouping identifiers incompatible with existing data.
@@ -137,6 +137,6 @@ Run `audit-drive` on a schedule and before freezing every dataset release. Any c
   content restrictions. The dedicated ingestion identity also has this power and
   must be treated as a privileged credential.
 - Do not use public links.
-- Hosted annotators use named, explicitly activated Supabase Auth accounts and do not receive Drive access. The local compatibility workbench still has no human authentication and must remain on loopback.
+- Hosted annotators use named, explicitly activated Supabase Auth accounts and do not receive Drive access. The local ingestion service has no human authentication and no annotation interface, and must remain on loopback.
 
 Google documents [custom `appProperties`](https://developers.google.com/workspace/drive/api/guides/properties), [content restrictions](https://developers.google.com/workspace/drive/api/guides/content-restrictions), and [resumable uploads](https://developers.google.com/workspace/drive/api/guides/manage-uploads).

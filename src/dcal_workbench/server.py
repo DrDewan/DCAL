@@ -1,13 +1,12 @@
 from __future__ import annotations
 
+import hmac
 import json
-import mimetypes
 import re
 from email.parser import BytesParser
 from email.policy import default
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, urlparse
 
@@ -17,14 +16,12 @@ from dcal_ingestion.models import SourceRejected
 from .store import (
     TaskNotFound,
     UploadItem,
-    VersionConflict,
     WorkbenchError,
     WorkbenchStore,
 )
 
 
 MAX_REQUEST_BYTES = MAX_SOURCE_BYTES + 2 * 1024 * 1024
-STATIC_ROOT = Path(__file__).with_name("static")
 TASK_PATH = re.compile(r"^/api/tasks/(page_[0-9]{6,})(?:/(image))?$")
 
 
@@ -135,37 +132,15 @@ def handler_factory(store: WorkbenchStore, ingestion_token: str) -> type[BaseHTT
             return payload
 
         def _authorized_ingestion(self) -> bool:
+            if not ingestion_token:
+                return False
+            supplied = self.headers.get("Authorization") or ""
             expected = f"Bearer {ingestion_token}"
-            return bool(ingestion_token) and self.headers.get("Authorization") == expected
-
-        def _serve_static(self, route: str) -> None:
-            names = {
-                "/": "index.html",
-                "/index.html": "index.html",
-                "/app.js": "app.js",
-                "/styles.css": "styles.css",
-            }
-            name = names.get(route)
-            if name is None:
-                self._error(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
-                return
-            path = STATIC_ROOT / name
-            try:
-                body = path.read_bytes()
-            except OSError:
-                self._error(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
-                return
-            content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-            if content_type.startswith("text/") or content_type == "application/javascript":
-                content_type += "; charset=utf-8"
-            self._headers(HTTPStatus.OK, content_type, len(body))
-            self.wfile.write(body)
+            return hmac.compare_digest(supplied, expected)
 
         def _handle_error(self, error: Exception) -> None:
             if isinstance(error, TaskNotFound):
                 self._error(HTTPStatus.NOT_FOUND, "task_not_found", str(error))
-            elif isinstance(error, VersionConflict):
-                self._error(HTTPStatus.CONFLICT, "version_conflict", str(error))
             elif isinstance(error, (WorkbenchError, SourceRejected)):
                 self._error(HTTPStatus.BAD_REQUEST, "invalid_request", str(error))
             else:
@@ -182,9 +157,6 @@ def handler_factory(store: WorkbenchStore, ingestion_token: str) -> type[BaseHTT
                 if route == "/api/health":
                     self._send_json(HTTPStatus.OK, {"status": "ok"})
                     return
-                if route == "/api/taxonomy":
-                    self._send_json(HTTPStatus.OK, store.taxonomy_payload())
-                    return
                 if route == "/api/tasks":
                     query = parse_qs(parsed.query)
                     payload = store.list_tasks(
@@ -200,22 +172,6 @@ def handler_factory(store: WorkbenchStore, ingestion_token: str) -> type[BaseHTT
                         return
                     self._send_json(HTTPStatus.OK, {"tasks": store.task_index()})
                     return
-                if route == "/api/export/gold.jsonl":
-                    content, summary = store.export_gold()
-                    body = content.encode("utf-8")
-                    self.send_response(HTTPStatus.OK)
-                    self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
-                    self.send_header("Content-Disposition", "attachment; filename=dcal-gold.jsonl")
-                    self.send_header("X-DCAL-Exported", str(summary["exported"]))
-                    self.send_header(
-                        "X-DCAL-Skipped-Manual",
-                        str(summary["skipped_manual_without_grouping"]),
-                    )
-                    self.send_header("Content-Length", str(len(body)))
-                    self.send_header("Cache-Control", "no-store")
-                    self.end_headers()
-                    self.wfile.write(body)
-                    return
                 match = TASK_PATH.fullmatch(route)
                 if match:
                     task_id, image = match.groups()
@@ -227,7 +183,7 @@ def handler_factory(store: WorkbenchStore, ingestion_token: str) -> type[BaseHTT
                     else:
                         self._send_json(HTTPStatus.OK, store.get_task(task_id))
                     return
-                self._serve_static(route)
+                self._error(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
             except Exception as error:  # safe boundary; never echo raw external errors
                 self._handle_error(error)
 
@@ -254,24 +210,6 @@ def handler_factory(store: WorkbenchStore, ingestion_token: str) -> type[BaseHTT
             except Exception as error:
                 self._handle_error(error)
 
-        def do_PUT(self) -> None:  # noqa: N802 - stdlib handler contract
-            try:
-                route = urlparse(self.path).path
-                match = TASK_PATH.fullmatch(route)
-                if not match or match.group(2):
-                    self._error(HTTPStatus.NOT_FOUND, "not_found", "resource not found")
-                    return
-                payload = self._read_json()
-                task = store.save_task(
-                    match.group(1),
-                    annotation=payload.get("annotation"),
-                    expected_version=payload.get("expected_version"),
-                    actor=payload.get("actor", ""),
-                    status=payload.get("status"),
-                )
-                self._send_json(HTTPStatus.OK, task)
-            except Exception as error:
-                self._handle_error(error)
 
     return WorkbenchHandler
 

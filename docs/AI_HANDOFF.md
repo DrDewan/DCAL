@@ -314,11 +314,13 @@ A future cleanup may merge UX v2 into a more maintainable client architecture, b
 - `src/dcal_ingestion/recovery.py` — audit/recovery.
 - `src/dcal_ingestion/cli.py` — operational commands.
 
-### Local compatibility workbench
+### Local ingestion and upload service
 
 - `src/dcal_workbench/`
 
-This is still useful for local development/recovery compatibility, but the hosted Next.js workbench is the primary product path.
+Ingestion sink and upload renderer only: `store.py` holds task rows, `server.py` exposes health, uploads, Drive-worker ingestion, and read-only task/image inspection. It is retained because it renders PDF, TIFF, and BMP sources that the hosted Vercel upload route cannot accept.
+
+It contains **no** annotation validator, no save path, no gold export, and no browser client. Those live only in `web/`. Do not reintroduce annotation here (D-018).
 
 ### Gold/legacy annotation tooling
 
@@ -550,9 +552,13 @@ As described above, `ux-v2.js` monkey-patches/wraps the base workbench client. I
 
 The taxonomy exists in both canonical repo configuration and the web bundle. Keep them synchronized deliberately. Compatibility Label Studio aliases can also make CI fail if forgotten.
 
-### Hosted vs local workbench divergence
+### Hosted vs local workbench divergence — resolved
 
-The hosted UI is the primary path. The local Python workbench still exists and does not automatically inherit every hosted UX enhancement. Do not assume a frontend improvement in `web/` also exists in `src/dcal_workbench/static/`.
+Previously the annotation contract was implemented twice and had already drifted: the Python validator silently discarded `table_data` while declaring the same `dcal.annotation.v2` schema as the hosted validator that preserved it.
+
+The duplicate annotation implementation was removed (D-018). `web/` is now the only place annotation is validated, saved, or exported. The Python side keeps ingestion and upload only.
+
+Remaining single-source risk: `web/lib/validation.ts` is the sole annotation validator, so it has no cross-check. Its behavior is covered by `web/tests/`, which CI now runs.
 
 ### Dataset release registry is not built
 

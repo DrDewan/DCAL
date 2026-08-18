@@ -139,3 +139,19 @@ Until this decision, GitHub CI validated the Python annotation and Compose/inges
 CI now runs a `hosted-workbench` job on every pull request: dependency install, `npm test`, `npm run typecheck`, `node --check` on both `public/app.js` and `public/ux-v2.js`, and a production `npm run build`. The build uses shape-valid placeholder environment values so `lib/env.ts` validation runs without contacting Supabase; real values remain only in Vercel project settings.
 
 The browser-client syntax check covers `ux-v2.js` as well as the base client because the UX v2 layer is loaded on every hosted page and a syntax error there silently disables table entry and navigation rather than failing the build.
+
+## D-018 — Annotation is implemented once, in the hosted workbench
+
+**Status:** Accepted, 17 August 2026
+
+D-012 made the first-party workbench the primary annotation interface and D-013 moved it to Vercel plus Supabase, but the original local Python workbench kept its own full annotation implementation: a second validator, a second save path with its own optimistic locking, a second gold exporter, and a second browser client. One contract, two implementations, in two languages.
+
+They drifted, as duplicated contracts do. The Python validator silently discarded `table_data` on save while declaring the same `dcal.annotation.v2` schema string as the hosted validator that preserved it, so the same payload meant different things depending on which implementation received it.
+
+`src/dcal_workbench/` is therefore reduced to an ingestion sink and upload renderer. It keeps `import_ingestion_task`, `upload_sources`, the task index, and read-only task/image inspection. It loses the annotation validator, `save_task`, `export_gold`, the `revisions` table, the taxonomy dependency, the `/api/taxonomy` and gold-export endpoints, the `PUT` handler, and the entire `static/` browser client.
+
+It is retained rather than deleted because it renders PDF, TIFF, and BMP sources at 300 DPI, which the hosted upload route deliberately cannot do: D-013 keeps PDF rendering off Vercel functions, and `web/app/api/uploads/route.ts` accepts only JPEG/PNG/WebP under 4 MiB.
+
+The local service is not an alternative annotation path, and pages ingested locally are not annotatable until they also reach the hosted workbench. A laptop-side upload cannot be made dataset-eligible: `tasks_provenance_bundle` requires `google_drive` origin with patient and encounter grouping, so files that belong in the dataset go into the Drive inbox and acquire real provenance from the worker. Do not add a local annotation UI back, and do not manufacture grouping identifiers to make a local upload look dataset-ready.
+
+Consequence to accept deliberately: `web/lib/validation.ts` is now the only annotation validator and has no second implementation to disagree with it. That is the point, but it means its own tests are the only guard, which is why D-017 put them in CI first.
