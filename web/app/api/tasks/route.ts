@@ -8,6 +8,9 @@ import { type TaskRow, taskColumns, taskSummary } from "@/lib/tasks";
 
 export const dynamic = "force-dynamic";
 
+const DEFAULT_LIMIT = 250;
+const MAX_LIMIT = 1000;
+
 async function countTasks(status?: string, eligible = false) {
   const admin = createAdminClient();
   let query = admin.from("tasks").select("id", { count: "exact", head: true });
@@ -31,6 +34,16 @@ export async function GET(request: NextRequest) {
       throw new HttpError(400, "invalid_filter", "Unknown document type filter.");
     }
     if (search.length > 100) throw new HttpError(400, "invalid_filter", "Search is too long.");
+    const rawLimit = request.nextUrl.searchParams.get("limit");
+    const rawOffset = request.nextUrl.searchParams.get("offset");
+    const limit = rawLimit === null ? DEFAULT_LIMIT : Number(rawLimit);
+    const offset = rawOffset === null ? 0 : Number(rawOffset);
+    if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIMIT) {
+      throw new HttpError(400, "invalid_filter", `limit must be between 1 and ${MAX_LIMIT}.`);
+    }
+    if (!Number.isInteger(offset) || offset < 0) {
+      throw new HttpError(400, "invalid_filter", "offset must be zero or greater.");
+    }
 
     const admin = createAdminClient();
     let query = admin
@@ -38,7 +51,7 @@ export async function GET(request: NextRequest) {
       .select(taskColumns)
       .order("updated_at", { ascending: false })
       .order("id", { ascending: false })
-      .limit(250);
+      .range(offset, offset + limit - 1);
     if (status) query = query.eq("status", status);
     if (documentType) query = query.eq("annotation->>document_type", documentType);
     if (search) {
@@ -58,6 +71,7 @@ export async function GET(request: NextRequest) {
       counts: Object.fromEntries(TASK_STATUSES.map((item, index) => [item, counts[index]])),
       total,
       dataset_eligible: datasetEligible,
+      page: { limit, offset, returned: ((data ?? []) as unknown[]).length },
     });
   } catch (error) {
     return jsonError(error);

@@ -66,6 +66,7 @@ The values have different purposes and must not be reused.
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | No | No | Rotate in Supabase if required |
 | `SUPABASE_SECRET_KEY` | Yes | No | **Yes** | Rotate after exposure; never prefix `NEXT_PUBLIC_` |
 | `DCAL_WORKBENCH_INGEST_TOKEN` | Yes | Yes | **Yes** | Rotate both ends together |
+| `DCAL_APP_ORIGIN` | Optional | No | No | Set on production only; leave unset on previews |
 | `DCAL_GROUP_HMAC_KEY` | No | Yes | **Yes, identity-critical** | Do not rotate after ingestion without identity migration |
 | `DCAL_DRIVE_ROOT_FOLDER_ID` | No | Yes | Sensitive operational metadata | Change only with explicit Drive migration |
 | Google credential JSON | No | Yes | **Yes** | Rotate through Google Cloud/Workspace |

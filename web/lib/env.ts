@@ -44,3 +44,26 @@ export function ingestionToken() {
   }
   return token;
 }
+
+// Optional explicit allowlist for same-origin mutation checks. When unset, the
+// check falls back to the proxy-reported host, which is correct on Vercel but
+// relies on the platform rewriting x-forwarded-*. Set this in production to
+// pin mutations to known origins; leave it unset for preview deployments,
+// whose URLs change per branch.
+export function appOrigins(): string[] {
+  const raw = process.env.DCAL_APP_ORIGIN?.trim();
+  if (!raw) return [];
+  const origins: string[] = [];
+  for (const entry of raw.split(",")) {
+    const value = entry.trim();
+    if (!value) continue;
+    let parsed: URL;
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new Error("DCAL_APP_ORIGIN must contain absolute origins");
+    }
+    origins.push(parsed.origin);
+  }
+  return origins;
+}
