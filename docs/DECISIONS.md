@@ -117,3 +117,25 @@ The purpose of M1 is to create reliable human-reviewed data at usable speed. Ann
 The hosted canvas uses ordinary wheel/two-finger gestures to pan the page, pinch or `Ctrl/Cmd + wheel` to zoom around the pointer, and an explicit Pan tool for drag movement. The selected-region editor scrolls independently from the canvas and multiline transcription preserves visible line breaks.
 
 The current implementation delivers these changes through a `ux-v2.js` enhancement layer loaded after the base `app.js`. This layering is an implementation compromise, not a permanent architectural requirement. A future consolidation must be a dedicated behavior-preserving refactor rather than an incidental cleanup bundled with new annotation features.
+
+## D-016 — Structured table cells are part of normalized output, as `dcal.gold.v2`
+
+**Status:** Accepted, 17 August 2026
+
+D-014 made `table_data` the structured transcription source for relational tables, and `DATA_CONTRACT.md` forbids flattening a table into the parent region `transcription`. Both normalizers nevertheless dropped `table_data` when building normalized records, so every transcribed investigation table was discarded at the export boundary and no gold consumer could see table content in any form.
+
+Normalized region output now carries `table_data`: the structured payload for `structure_role: "table"` regions, and an explicit `null` for every other region and for every legacy Label Studio record. Both the hosted exporter and the local compatibility exporter emit the same region shape.
+
+This is a new `dcal.gold` version rather than an additive change within v1. The additive-field allowance in `DATA_CONTRACT.md` covers mutable `dcal.annotation` state, where no record hash is published. Normalized output includes `record_sha256` over the whole record, so adding a region field changes the hash of every exported page. Reusing `dcal.gold.v1` would have produced two different hashes under one version string and defeated the purpose of the hash. No frozen release exists yet, so the migration cost of the bump is zero and the ambiguity cost of not bumping is permanent.
+
+`dcal.gold.v1` was never produced by a working hosted export path, so no v1 artifact needs migration. The local compatibility exporter and the Label Studio adapter both move to v2 together, keeping one shape across sources as required by `DATA_CONTRACT.md`.
+
+## D-017 — The hosted workbench is covered by CI
+
+**Status:** Accepted, 17 August 2026
+
+Until this decision, GitHub CI validated the Python annotation and Compose/ingestion contracts only. The hosted Next.js application — the sole production annotation interface — had tests, a typecheck, and a build that no automated check ever ran, and the missing gold-export route that D-013 required reached production undetected as a result.
+
+CI now runs a `hosted-workbench` job on every pull request: dependency install, `npm test`, `npm run typecheck`, `node --check` on both `public/app.js` and `public/ux-v2.js`, and a production `npm run build`. The build uses shape-valid placeholder environment values so `lib/env.ts` validation runs without contacting Supabase; real values remain only in Vercel project settings.
+
+The browser-client syntax check covers `ux-v2.js` as well as the base client because the UX v2 layer is loaded on every hosted page and a syntax error there silently disables table entry and navigation rather than failing the build.

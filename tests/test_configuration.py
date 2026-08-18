@@ -20,6 +20,26 @@ LABEL_CONFIG_PATH = (
     / "label-studio"
     / "bmch-page-annotation.v1.xml"
 )
+WEB_TAXONOMY_PATH = REPOSITORY_ROOT / "web" / "data" / "taxonomy.json"
+
+
+class HostedTaxonomyParityTests(unittest.TestCase):
+    """The hosted workbench bundles its own taxonomy copy for Vercel builds.
+
+    A drifted copy silently changes what annotators can select in production
+    while every canonical-taxonomy check still passes, so the two files are
+    required to be byte-equivalent JSON.
+    """
+
+    def test_hosted_taxonomy_copy_matches_the_canonical_taxonomy(self) -> None:
+        canonical = json.loads(TAXONOMY_PATH.read_text(encoding="utf-8"))
+        hosted = json.loads(WEB_TAXONOMY_PATH.read_text(encoding="utf-8"))
+        self.assertEqual(
+            canonical,
+            hosted,
+            "web/data/taxonomy.json has drifted from "
+            "config/taxonomy/bmch-document-taxonomy.v1.json",
+        )
 
 
 class LabelConfigurationTests(unittest.TestCase):

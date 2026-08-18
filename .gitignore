@@ -21,3 +21,10 @@ postgres-data/
 
 # Allow the synthetic repository fixture.
 !examples/*.jsonl
+
+# The hosted gold-export route lives in a directory named for its URL segment,
+# which the *.jsonl data rule above would otherwise exclude. Without these
+# negations the route source is silently untracked and the deployed endpoint
+# returns 404 while local builds succeed. Data files remain excluded.
+!web/app/api/export/gold.jsonl/
+!web/app/api/export/gold.jsonl/route.ts

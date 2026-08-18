@@ -1,4 +1,6 @@
-# DCAL annotation and gold-data contract v1
+# DCAL annotation and gold-data contract
+
+Current versions: `dcal.annotation.v2` workbench state, `dcal.gold.v2` normalized output.
 
 Read `AI_HANDOFF.md` for the current deployed implementation snapshot. This document defines the data-contract rules.
 
@@ -169,7 +171,7 @@ The table cell matrix is the structured transcription source. Do not flatten the
 
 ## Dataset eligibility
 
-Browser-uploaded pilot pages lack trustworthy patient/encounter grouping. They may be annotated/revisioned but are excluded from `dcal.gold.v1` export.
+Browser-uploaded pilot pages lack trustworthy patient/encounter grouping. They may be annotated/revisioned but are excluded from `dcal.gold.v2` export.
 
 When Drive ingestion later submits the same canonical page checksum or exact raw-image checksum with complete opaque provenance, the existing task may be upgraded to dataset-eligible without discarding annotation. Client-resized browser images may not match and should be treated as UI pilots only.
 
@@ -192,7 +194,7 @@ One JSON object is written per page in JSONL format:
 
 ```json
 {
-  "schema_version": "dcal.gold.v1",
+  "schema_version": "dcal.gold.v2",
   "taxonomy_version": "dcal.taxonomy.v1",
   "source": {
     "object_id": "opaque-source-001",
@@ -224,7 +226,38 @@ One JSON object is written per page in JSONL format:
 }
 ```
 
-For legacy Label Studio export, the annotation object retains Label Studio-specific provenance IDs. Consumers accept source-specific annotation provenance while treating the remaining `dcal.gold.v1` fields identically.
+Each normalized region has this shape, regardless of source:
+
+```json
+{
+  "region_id": "reg_abcdef012345",
+  "reading_order": 4,
+  "label": "other_region",
+  "structure_role": "table",
+  "legibility": "not_applicable",
+  "semantic_region_type": null,
+  "field_code": "cbc_results",
+  "transcription": null,
+  "table_data": {
+    "rows": 3,
+    "columns": 4,
+    "header_rows": 1,
+    "column_labels": ["printed_static", "printed_variable", "printed_static", "printed_static"],
+    "cells": [
+      ["Test", "Result", "Unit", "Reference"],
+      ["White Blood Cells", "07.50", "10^9/L", "4.00 - 11.00"],
+      ["Haemoglobin", "13.40", "g/dL", "13 - 18"]
+    ]
+  },
+  "geometry": {}
+}
+```
+
+`table_data` carries the validated structured payload for `structure_role: "table"` regions and is explicitly `null` for every other region. Legacy Label Studio records always emit `null` because that adapter never produced structured tables. Consumers therefore read one region shape across sources.
+
+A gold record must never omit transcribed table cells. Dropping `table_data` from normalized output discards the entire content of an investigation table, because the parent region `transcription` is deliberately not a flattened copy of the grid.
+
+For legacy Label Studio export, the annotation object retains Label Studio-specific provenance IDs. Consumers accept source-specific annotation provenance while treating the remaining `dcal.gold.v2` fields identically.
 
 The deterministic record hash detects accidental changes between dataset releases. It is not a digital signature and does not replace access control/release signing.
 

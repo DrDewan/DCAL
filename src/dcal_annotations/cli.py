@@ -29,7 +29,7 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("--taxonomy", type=Path, default=DEFAULT_TAXONOMY_PATH)
 
     normalize = subparsers.add_parser(
-        "normalize-export", help="Validate and write deterministic dcal.gold.v1 JSONL."
+        "normalize-export", help="Validate and write deterministic dcal.gold.v2 JSONL."
     )
     normalize.add_argument("input", type=Path)
     normalize.add_argument("--output", type=Path, required=True)

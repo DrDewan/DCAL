@@ -21,7 +21,11 @@ from dcal_ingestion.render import render_source
 
 WORKBENCH_SCHEMA = "dcal.workbench.v1"
 ANNOTATION_SCHEMA = "dcal.annotation.v2"
-GOLD_SCHEMA = "dcal.gold.v1"
+GOLD_SCHEMA = "dcal.gold.v2"
+TABLE_MAX_ROWS = 100
+TABLE_MAX_COLUMNS = 12
+TABLE_MAX_CELL_LENGTH = 10_000
+TABLE_MAX_TEXT_LENGTH = 100_000
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 INGESTION_KEY_RE = re.compile(r"^task_[0-9a-f]{32}$")
 FIELD_CODE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -445,6 +449,76 @@ class WorkbenchStore:
             raise TaskNotFound("task image is unavailable")
         return path
 
+    def _normalize_table_data(self, value: Any, region_number: int) -> dict[str, Any]:
+        # Mirrors web/lib/validation.ts normalizeTableData. Both implementations
+        # must accept exactly the same dcal.annotation.v2 table payload.
+        if not isinstance(value, dict):
+            raise WorkbenchError(f"region {region_number} needs table data")
+        rows = value.get("rows")
+        columns = value.get("columns")
+        header_rows = value.get("header_rows", 0)
+        if isinstance(rows, bool) or not isinstance(rows, int) or not 1 <= rows <= TABLE_MAX_ROWS:
+            raise WorkbenchError(
+                f"region {region_number} table rows must be between 1 and {TABLE_MAX_ROWS}"
+            )
+        if (
+            isinstance(columns, bool)
+            or not isinstance(columns, int)
+            or not 1 <= columns <= TABLE_MAX_COLUMNS
+        ):
+            raise WorkbenchError(
+                f"region {region_number} table columns must be between 1 and {TABLE_MAX_COLUMNS}"
+            )
+        if (
+            isinstance(header_rows, bool)
+            or not isinstance(header_rows, int)
+            or not 0 <= header_rows <= rows
+        ):
+            raise WorkbenchError(f"region {region_number} has invalid table header rows")
+
+        column_labels = value.get("column_labels")
+        if not isinstance(column_labels, list) or len(column_labels) != columns:
+            raise WorkbenchError(
+                f"region {region_number} table column types must match the column count"
+            )
+        for offset, label in enumerate(column_labels):
+            contract = self.taxonomy.region_labels.get(label) if isinstance(label, str) else None
+            if contract is None or contract.get("textual") is not True:
+                raise WorkbenchError(
+                    f"region {region_number} table column {offset + 1} needs a textual content type"
+                )
+
+        raw_cells = value.get("cells")
+        if not isinstance(raw_cells, list) or len(raw_cells) != rows:
+            raise WorkbenchError(f"region {region_number} table cells must match the row count")
+        total_length = 0
+        cells: list[list[str]] = []
+        for row_index, raw_row in enumerate(raw_cells):
+            if not isinstance(raw_row, list) or len(raw_row) != columns:
+                raise WorkbenchError(
+                    f"region {region_number} table row {row_index + 1} must match the column count"
+                )
+            row_values: list[str] = []
+            for column_index, cell in enumerate(raw_row):
+                if not isinstance(cell, str) or len(cell) > TABLE_MAX_CELL_LENGTH:
+                    raise WorkbenchError(
+                        f"region {region_number} table cell "
+                        f"{row_index + 1},{column_index + 1} is invalid"
+                    )
+                total_length += len(cell)
+                if total_length > TABLE_MAX_TEXT_LENGTH:
+                    raise WorkbenchError(f"region {region_number} table text is too large")
+                row_values.append(cell)
+            cells.append(row_values)
+
+        return {
+            "rows": rows,
+            "columns": columns,
+            "header_rows": header_rows,
+            "column_labels": list(column_labels),
+            "cells": cells,
+        }
+
     def _validate_annotation(self, annotation: Any, *, completing: bool) -> dict[str, Any]:
         if not isinstance(annotation, dict):
             raise WorkbenchError("annotation must be an object")
@@ -537,6 +611,20 @@ class WorkbenchStore:
                 and not transcription.strip()
             ):
                 raise WorkbenchError(f"region {index + 1} needs exact transcription")
+            if structure_role == "table":
+                table_data = self._normalize_table_data(raw.get("table_data"), index + 1)
+            else:
+                if raw.get("table_data") is not None:
+                    raise WorkbenchError(
+                        f"region {index + 1} has table data but is not marked as a table"
+                    )
+                table_data = None
+            if completing and table_data is not None and not any(
+                cell.strip() for row in table_data["cells"] for cell in row
+            ):
+                raise WorkbenchError(
+                    f"region {index + 1} table needs at least one transcribed cell"
+                )
             regions.append(
                 {
                     "id": region_id,
@@ -546,6 +634,7 @@ class WorkbenchStore:
                     "reading_order": reading_order,
                     "field_code": field_code or None,
                     "transcription": transcription,
+                    "table_data": table_data,
                     **geometry,
                 }
             )
@@ -675,6 +764,7 @@ class WorkbenchStore:
                         "semantic_region_type": None,
                         "field_code": region["field_code"],
                         "transcription": region["transcription"] or None,
+                        "table_data": region["table_data"],
                         "geometry": {
                             "x": region["x"], "y": region["y"],
                             "width": region["width"], "height": region["height"],

@@ -11,7 +11,7 @@ For the current deployed implementation snapshot and exact continuation context,
 - Optional self-hosted Label Studio and PostgreSQL compatibility stack.
 - Versioned BMCH taxonomy and single-page annotation configuration.
 - Strict Label Studio export validation.
-- Deterministic `dcal.gold.v1` normalization.
+- Deterministic `dcal.gold.v2` normalization.
 - Synthetic tests and CI.
 
 **Exit gate:** historical contract complete; the usability gate moved to M1 under the first-party workbench.

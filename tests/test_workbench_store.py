@@ -50,6 +50,48 @@ def completed_annotation() -> dict[str, object]:
     }
 
 
+def table_annotation() -> dict[str, object]:
+    return {
+        "schema_version": "dcal.annotation.v2",
+        "document_type": "bmch_haematology_report",
+        "document_variant": None,
+        "content_profile": "printed_filled_form",
+        "image_quality": ["clear"],
+        "notes": "Synthetic investigation table",
+        "regions": [
+            {
+                "id": "reg_abcdef012345",
+                "label": "other_region",
+                "structure_role": "table",
+                "legibility": "not_applicable",
+                "reading_order": 1,
+                "field_code": "cbc_results",
+                "transcription": "",
+                "table_data": {
+                    "rows": 3,
+                    "columns": 4,
+                    "header_rows": 1,
+                    "column_labels": [
+                        "printed_static",
+                        "printed_variable",
+                        "printed_static",
+                        "printed_static",
+                    ],
+                    "cells": [
+                        ["Test", "Result", "Unit", "Reference"],
+                        ["White Blood Cells", "07.50", "10^9/L", "4.00 - 11.00"],
+                        ["Haemoglobin", "13.40", "g/dL", "13 - 18"],
+                    ],
+                },
+                "x": 8.0,
+                "y": 31.0,
+                "width": 84.0,
+                "height": 52.0,
+            }
+        ],
+    }
+
+
 class WorkbenchStoreTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -129,6 +171,62 @@ class WorkbenchStoreTests(unittest.TestCase):
         self.assertEqual("dcal_workbench", record["annotation"]["source"])
         self.assertEqual("pat_opaque", record["source"]["patient_group_id"])
         self.assertEqual(completed["id"], record["annotation"]["workbench_task_id"])
+
+    def test_structured_table_survives_save_and_gold_export(self) -> None:
+        uploaded = self.store.upload_sources([UploadItem(synthetic_png("linen"), "image/png")])
+        with self.store._connect() as connection:  # test-only identity inspection
+            sha = connection.execute(
+                "SELECT source_sha256 FROM tasks WHERE id=1"
+            ).fetchone()[0]
+        self.store.import_ingestion_task(
+            {
+                "image": label_studio_local_url(sha),
+                "source_object_id": "src_opaque",
+                "source_sha256": sha,
+                "raw_source_sha256": "a" * 64,
+                "patient_group_id": "pat_opaque",
+                "encounter_group_id": "enc_opaque",
+                "writer_group_ids": [],
+                "source_page_index": 1,
+                "annotation_schema_version": "dcal.annotation.v1",
+                "ingestion_schema_version": INGESTION_SCHEMA,
+                "render_profile": RENDER_PROFILE,
+                "dcal_ingestion_key": task_ingestion_key(sha),
+            }
+        )
+        task = self.store.get_task(uploaded[0]["id"])
+        saved = self.store.save_task(
+            task["id"],
+            annotation=table_annotation(),
+            expected_version=task["version"],
+            actor="Synthetic Annotator",
+            status="completed",
+        )
+        stored_table = saved["annotation"]["regions"][0]["table_data"]
+        self.assertEqual(3, stored_table["rows"])
+        self.assertEqual("07.50", stored_table["cells"][1][1])
+
+        content, summary = self.store.export_gold()
+        record = json.loads(content)
+        self.assertEqual(1, summary["exported"])
+        exported_table = record["regions"][0]["table_data"]
+        self.assertEqual(stored_table, exported_table)
+
+    def test_table_payload_is_rejected_on_a_non_table_region(self) -> None:
+        task_id = self.store.upload_sources(
+            [UploadItem(synthetic_png("azure"), "image/png")]
+        )[0]["id"]
+        task = self.store.get_task(task_id)
+        annotation = completed_annotation()
+        annotation["regions"][0]["table_data"] = table_annotation()["regions"][0]["table_data"]
+        with self.assertRaisesRegex(WorkbenchError, "not marked as a table"):
+            self.store.save_task(
+                task["id"],
+                annotation=annotation,
+                expected_version=task["version"],
+                actor="Synthetic Annotator",
+                status="completed",
+            )
 
     def test_completion_contract_and_optimistic_locking(self) -> None:
         task_id = self.store.upload_sources([UploadItem(synthetic_png("gray"), "image/png")])[0]["id"]

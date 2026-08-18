@@ -130,6 +130,7 @@ export function goldRecord(row: TaskRow) {
       semantic_region_type: null,
       field_code: region.field_code,
       transcription: region.transcription || null,
+      table_data: region.table_data,
       geometry: {
         x: region.x,
         y: region.y,

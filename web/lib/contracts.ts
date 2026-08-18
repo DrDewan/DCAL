@@ -2,7 +2,7 @@ import taxonomy from "@/data/taxonomy.json";
 
 export const WORKBENCH_SCHEMA = "dcal.workbench.v1";
 export const ANNOTATION_SCHEMA = "dcal.annotation.v2";
-export const GOLD_SCHEMA = "dcal.gold.v1";
+export const GOLD_SCHEMA = "dcal.gold.v2";
 export const INGESTION_SCHEMA = "dcal.ingestion.v1";
 export const PAGE_BUCKET = "dcal-pages";
 export const TASK_STATUSES = [

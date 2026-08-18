@@ -10,7 +10,7 @@ The workbench is the primary DCAL interface for building the institution-specifi
 2. queues pages and shows annotation progress;
 3. records physical document type, template variant, content profile, and image-quality defects;
 4. records typed bounding boxes, reading order, legibility, stable field codes, exact text, and structured tables;
-5. validates completed pages and exports provenance-complete records to `dcal.gold.v1` JSONL.
+5. validates completed pages and exports provenance-complete records to `dcal.gold.v2` JSONL.
 
 It is not an electronic medical record, DCRP component, model runner, or frozen dataset registry.
 
@@ -147,6 +147,11 @@ The ingestion token is never a human login and the worker never receives the Sup
 ## Export
 
 Reviewers and administrators can use **Export gold** in the hosted header. Annotators cannot export.
+
+The hosted endpoint is `GET /api/export/gold.jsonl`. It requires an active reviewer or administrator session, streams `application/x-ndjson`, and orders records by canonical page checksum so two exports of unchanged state are byte-identical. Two response headers report what happened:
+
+- `X-DCAL-Exported` — records written.
+- `X-DCAL-Skipped-Invalid` — completed dataset-eligible rows that no longer satisfy the completion contract and were omitted. A non-zero value means stored annotation state drifted from the current taxonomy or validation rules; investigate before treating the file as a complete extract.
 
 For the local compatibility server:
 
